@@ -1,0 +1,14 @@
+# Сборка
+build/
+dist/
+
+# Отладка (пишется только при LS_DEBUG=1)
+debug.log
+
+# macOS
+.DS_Store
+
+# Xcode, если проект когда-нибудь туда переедет
+*.xcuserstate
+xcuserdata/
+DerivedData/

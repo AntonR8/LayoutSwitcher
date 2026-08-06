@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+DIR="$(cd "$(dirname "$0")" && pwd)"
+mkdir -p "$DIR/build"
+swiftc -swift-version 5 -o "$DIR/build/tests" \
+    "$DIR/Sources/Extent.swift" "$DIR/Tests/main.swift"
+"$DIR/build/tests"
