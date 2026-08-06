@@ -3,29 +3,33 @@ import Foundation
 /// Чистая логика границ перебивки — без обращений к системе, чтобы её можно было тестировать.
 enum Extent {
 
-    static func isBlank(_ s: String) -> Bool {
-        s.trimmingCharacters(in: .whitespaces).isEmpty
-    }
+    static func isBlank(_ c: Character) -> Bool { c.isWhitespace }
 
     /// Возможные начала перебивки — от самого узкого к самому широкому, без повторов.
     /// Порядок и есть последовательность расширений при повторных двойных Shift.
     ///
-    /// - Parameters:
-    ///   - shown: что сейчас на экране для каждого нажатия.
-    ///   - sourceIDs: раскладка, в которой нажатие было набрано.
-    static func starts(shown: [String], sourceIDs: [String]) -> [Int] {
-        guard !shown.isEmpty, shown.count == sourceIDs.count else { return [] }
+    /// - Parameter text: текст до каретки.
+    static func starts(in text: [Character]) -> [Int] {
+        guard !text.isEmpty else { return [] }
 
         // Хвостовые пробелы не должны считаться границей.
-        var contentEnd = shown.count
-        while contentEnd > 0, isBlank(shown[contentEnd - 1]) { contentEnd -= 1 }
+        var contentEnd = text.count
+        while contentEnd > 0, isBlank(text[contentEnd - 1]) { contentEnd -= 1 }
         guard contentEnd > 0 else { return [] }
+
+        // Граница не должна вставать на пробел: перебивать ведущий пробел
+        // бессмысленно, а охват выглядит шире, чем есть.
+        func skippingBlanks(from index: Int) -> Int {
+            var i = index
+            while i < contentEnd, isBlank(text[i]) { i += 1 }
+            return i
+        }
 
         var result: [Int] = []
 
         // 1. Слово — назад до ближайшего пробела.
         var i = contentEnd - 1
-        while i >= 0, !isBlank(shown[i]) { i -= 1 }
+        while i >= 0, !isBlank(text[i]) { i -= 1 }
         result.append(i + 1)
 
         // 2. Предложение — назад до завершающего знака.
@@ -33,20 +37,30 @@ enum Extent {
         var sentenceStart = 0
         var j = contentEnd - 1
         while j >= 0 {
-            if let c = shown[j].first, terminators.contains(c) { sentenceStart = j + 1; break }
+            if terminators.contains(text[j]) { sentenceStart = j + 1; break }
             j -= 1
         }
-        result.append(sentenceStart)
+        result.append(skippingBlanks(from: sentenceStart))
 
-        // 3. С последней смены раскладки.
-        let lastID = sourceIDs[contentEnd - 1]
-        var langStart = 0
-        var k = contentEnd - 1
-        while k >= 0 {
-            if sourceIDs[k] != lastID { langStart = k + 1; break }
-            k -= 1
+        // 3. Смена алфавита. Цифры и знаки препинания к алфавиту не относятся
+        //    и границей не считаются — иначе «привет, world» рвалось бы по запятой.
+        var lastLetter = contentEnd - 1
+        var lastScript = Script.other
+        while lastLetter >= 0 {
+            let script = Script.of(text[lastLetter])
+            if script != .other { lastScript = script; break }
+            lastLetter -= 1
         }
-        result.append(langStart)
+        var scriptStart = 0
+        if lastScript != .other {
+            var k = lastLetter
+            while k >= 0 {
+                let script = Script.of(text[k])
+                if script != .other && script != lastScript { scriptStart = k + 1; break }
+                k -= 1
+            }
+        }
+        result.append(skippingBlanks(from: scriptStart))
 
         // 4. Вся строка.
         result.append(0)

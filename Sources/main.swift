@@ -5,15 +5,6 @@ import ServiceManagement
 // Метка на синтезированных нами событиях, чтобы не записывать их обратно в буфер.
 let kMagic: Int64 = 0x4C_53_57_54  // "LSWT"
 
-/// Одно нажатие: физическая клавиша, модификаторы, а также что она дала
-/// и в какой раскладке это было набрано.
-struct Stroke {
-    let keyCode: CGKeyCode
-    let modifierState: UInt32
-    let produced: String
-    let sourceID: String
-}
-
 // MARK: - Раскладки
 
 enum Layouts {
@@ -28,9 +19,8 @@ enum Layouts {
         return Unmanaged<CFString>.fromOpaque(p).takeUnretainedValue() as String
     }
 
-    static func name(_ src: TISInputSource) -> String {
-        guard let p = TISGetInputSourceProperty(src, kTISPropertyLocalizedName) else { return "?" }
-        return Unmanaged<CFString>.fromOpaque(p).takeUnretainedValue() as String
+    static func isASCII(_ src: TISInputSource) -> Bool {
+        bool(src, kTISPropertyInputSourceIsASCIICapable)
     }
 
     private static func layoutData(_ src: TISInputSource) -> Data? {
@@ -49,27 +39,20 @@ enum Layouts {
         TISCopyCurrentKeyboardInputSource()?.takeRetainedValue()
     }
 
-    static func source(withID id: String) -> TISInputSource? {
-        enabled().first { identifier($0) == id }
-    }
-
-    /// Парная раскладка: к латинской — первая нелатинская и наоборот.
-    static func counterpart(of src: TISInputSource) -> TISInputSource? {
-        let all = enabled()
-        let isASCII = bool(src, kTISPropertyInputSourceIsASCIICapable)
-        let curID = identifier(src)
-        if let match = all.first(where: { bool($0, kTISPropertyInputSourceIsASCIICapable) != isASCII }) {
-            return match
-        }
-        return all.first { identifier($0) != curID }
-    }
-
     static func select(_ src: TISInputSource) {
         TISSelectInputSource(src)
     }
 
-    /// Во что превращается это нажатие в заданной раскладке.
-    static func translate(_ keyCode: CGKeyCode, _ modifierState: UInt32, with src: TISInputSource) -> String? {
+    /// Пара «латинская — нелатинская» из включённых раскладок.
+    static func pair() -> (latin: TISInputSource, other: TISInputSource)? {
+        let all = enabled()
+        guard let latin = all.first(where: { isASCII($0) }),
+              let other = all.first(where: { !isASCII($0) }) else { return nil }
+        return (latin, other)
+    }
+
+    /// Во что превращается нажатие в заданной раскладке.
+    static func translate(_ keyCode: UInt16, _ modifierState: UInt32, with src: TISInputSource) -> String? {
         guard let data = layoutData(src) else { return nil }
         var chars = [UniChar](repeating: 0, count: 8)
         var length = 0
@@ -77,7 +60,7 @@ enum Layouts {
         let status: OSStatus = data.withUnsafeBytes { raw in
             guard let base = raw.baseAddress else { return OSStatus(paramErr) }
             return UCKeyTranslate(base.assumingMemoryBound(to: UCKeyboardLayout.self),
-                                  UInt16(keyCode),
+                                  keyCode,
                                   UInt16(kUCKeyActionDown),
                                   modifierState,
                                   UInt32(LMGetKbdType()),
@@ -97,10 +80,9 @@ final class Engine {
 
     private var tap: CFMachPort?
 
-    /// Набранное как есть — источник правды, при перебивке не меняется.
-    private var buffer: [Stroke] = []
-    /// Что сейчас реально на экране для каждого нажатия из буфера.
-    private var shown: [String] = []
+    /// Запасной буфер: что набрано с клавиатуры. Нужен только там, где поле
+    /// не отдаёт текст через Accessibility.
+    private var typed: [Character] = []
 
     private var lastShiftRelease: CFAbsoluteTime = 0
     private var shiftHeld = false
@@ -109,6 +91,11 @@ final class Engine {
     /// Насколько широко перебиваем: индекс в списке границ (0 — слово).
     private var expansionLevel = 0
     private var lastConvertAt: CFAbsoluteTime = 0
+    /// Текст до первой перебивки в текущей цепочке расширений — от него
+    /// каждый следующий уровень считается заново, иначе уже перебитое
+    /// перевернулось бы обратно.
+    private var chainBase: String?
+    private var lastWritten: String?
 
     /// Пауза между двумя нажатиями Shift, при которой они считаются двойным.
     var doubleTapWindow: CFAbsoluteTime = 0.4
@@ -116,6 +103,9 @@ final class Engine {
     var expandWindow: CFAbsoluteTime = 2.0
 
     private var retryTimer: Timer?
+    private var cachedMappings: (key: String, pair: MappingPair)?
+
+    // MARK: Запуск
 
     /// Пытается поднять перехват; если доступа ещё нет — ждёт его и поднимает сам,
     /// чтобы не требовать перезапуска после выдачи разрешения.
@@ -157,6 +147,8 @@ final class Engine {
         return true
     }
 
+    // MARK: События
+
     fileprivate func handle(type: CGEventType, event: CGEvent) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
@@ -177,13 +169,13 @@ final class Engine {
     }
 
     private func reset() {
-        buffer.removeAll()
-        shown.removeAll()
+        typed.removeAll()
         expansionLevel = 0
+        chainBase = nil
     }
 
     private func handleFlags(_ event: CGEvent) {
-        let code = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        let code = event.getIntegerValueField(.keyboardEventKeycode)
         guard code == 56 || code == 60 else { return }   // левый / правый Shift
 
         if event.flags.contains(.maskShift) {
@@ -210,10 +202,10 @@ final class Engine {
 
     private func handleKey(_ event: CGEvent) {
         keyPressedDuringShift = true
-        // Любой набор прерывает цепочку расширений.
         expansionLevel = 0
+        chainBase = nil
 
-        let code = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        let code = event.getIntegerValueField(.keyboardEventKeycode)
         let flags = event.flags
 
         // Сочетания с Cmd/Ctrl/Option — команды, а не набор текста.
@@ -224,9 +216,8 @@ final class Engine {
 
         switch Int(code) {
         case kVK_Delete:
-            if !buffer.isEmpty { buffer.removeLast(); shown.removeLast() }
+            if !typed.isEmpty { typed.removeLast() }
             return
-        // Уводят каретку или начинают новую строку — прежний контекст больше не наш.
         case kVK_Return, kVK_Tab, kVK_Escape, kVK_ANSI_KeypadEnter, kVK_ForwardDelete,
              kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow,
              kVK_Home, kVK_End, kVK_PageUp, kVK_PageDown:
@@ -236,40 +227,105 @@ final class Engine {
             break
         }
 
-        let modifierState = UInt32((flags.rawValue >> 16) & 0xFF)
+        // Символ берём из самого события — так надёжнее, чем пересчитывать раскладку.
+        var length = 0
+        var buffer = [UniChar](repeating: 0, count: 4)
+        event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &buffer)
+        guard length > 0 else { reset(); return }
 
-        // Клавиши без печатного результата (F1, Caps и т.п.) контекст обрывают.
-        guard let current = Layouts.current(),
-              let produced = Layouts.translate(code, modifierState, with: current),
-              !produced.isEmpty else {
-            reset()
-            return
-        }
+        let produced = String(utf16CodeUnits: buffer, count: length)
+        guard !produced.isEmpty, produced.first?.isNewline != true else { reset(); return }
 
-        buffer.append(Stroke(keyCode: code, modifierState: modifierState,
-                             produced: produced, sourceID: Layouts.identifier(current)))
-        shown.append(produced)
-
-        if buffer.count > 512 {
-            let extra = buffer.count - 512
-            buffer.removeFirst(extra)
-            shown.removeFirst(extra)
-        }
+        typed.append(contentsOf: produced)
+        if typed.count > 512 { typed.removeFirst(typed.count - 512) }
     }
 
-    // MARK: Границы охвата
+    // MARK: Таблицы соответствий
 
-    private func isBlank(_ s: String) -> Bool { Extent.isBlank(s) }
+    private func mappings() -> MappingPair? {
+        guard let (latin, other) = Layouts.pair() else { return nil }
+        let key = Layouts.identifier(latin) + "|" + Layouts.identifier(other)
+        if let cached = cachedMappings, cached.key == key { return cached.pair }
 
-    private func expansionStarts() -> [Int] {
-        Extent.starts(shown: shown, sourceIDs: buffer.map(\.sourceID))
+        let pair = MappingPair(
+            latinToCyrillic: Mapping(from: { Layouts.translate($0, $1, with: latin) },
+                                     to:   { Layouts.translate($0, $1, with: other) }),
+            cyrillicToLatin: Mapping(from: { Layouts.translate($0, $1, with: other) },
+                                     to:   { Layouts.translate($0, $1, with: latin) })
+        )
+        cachedMappings = (key, pair)
+        return pair
+    }
+
+    /// Переключить ввод под алфавит, который получился после перебивки.
+    private func selectLayout(for script: Script) {
+        guard let (latin, other) = Layouts.pair() else { return }
+        switch script {
+        case .latin:    Layouts.select(latin)
+        case .cyrillic: Layouts.select(other)
+        case .other:    break
+        }
     }
 
     // MARK: Перебивка
 
     /// - Parameter expanding: `false` — всегда начинать со слова (вызов из меню).
     func convert(expanding: Bool = true) {
-        guard !buffer.isEmpty else { return }
+        guard let pair = mappings() else { return }
+        if let field = AXText.read() {
+            convertInField(field, using: pair, expanding: expanding)
+        } else {
+            convertByTyping(using: pair, expanding: expanding)
+        }
+    }
+
+    /// Основной путь: читаем поле через Accessibility и переписываем его целиком.
+    private func convertInField(_ field: AXText.Field, using pair: MappingPair, expanding: Bool) {
+        let now = CFAbsoluteTimeGetCurrent()
+
+        // Цепочка расширений продолжается, только если с прошлого раза
+        // в поле ничего не менялось помимо нашей же записи.
+        let continues = expanding
+            && now - lastConvertAt < expandWindow
+            && chainBase != nil
+            && lastWritten == field.text
+
+        let base: String
+        if continues {
+            base = chainBase!
+            expansionLevel += 1
+        } else {
+            base = field.text
+            chainBase = base
+            expansionLevel = 0
+        }
+
+        let characters = Array(base)
+        let caret = min(field.caret, characters.count)
+        let before = Array(characters[0..<caret])
+
+        let starts = Extent.starts(in: before)
+        guard !starts.isEmpty else { return }
+        expansionLevel = min(expansionLevel, starts.count - 1)
+
+        let start = starts[expansionLevel]
+        let fragment = String(characters[start..<caret])
+        let converted = pair.convert(fragment)
+        guard converted != fragment else { return }
+
+        let result = String(characters[0..<start]) + converted + String(characters[caret...])
+        guard AXText.write(field, text: result, caret: start + converted.count) else { return }
+
+        lastWritten = result
+        lastConvertAt = CFAbsoluteTimeGetCurrent()
+        selectLayout(for: MappingPair.dominantScript(of: converted))
+    }
+
+    /// Запасной путь для полей, которые не отдают текст через Accessibility:
+    /// стираем забоями и печатаем заново. Опирается на буфер набранного,
+    /// поэтому в полях с автодополнением работает хуже.
+    private func convertByTyping(using pair: MappingPair, expanding: Bool) {
+        guard !typed.isEmpty else { return }
 
         let now = CFAbsoluteTimeGetCurrent()
         if expanding && now - lastConvertAt < expandWindow {
@@ -278,58 +334,23 @@ final class Engine {
             expansionLevel = 0
         }
 
-        let starts = expansionStarts()
+        let starts = Extent.starts(in: typed)
         guard !starts.isEmpty else { return }
         expansionLevel = min(expansionLevel, starts.count - 1)
 
         let start = starts[expansionLevel]
-        let extent = Array(start..<buffer.count)
-        guard !extent.isEmpty else { return }
+        let fragment = String(typed[start...])
+        let converted = pair.convert(fragment)
+        guard converted != fragment else { return }
 
-        // Если весь охват уже перебит — вернуть как было набрано.
-        let meaningful = extent.filter { !isBlank(buffer[$0].produced) }
-        let allConverted = !meaningful.isEmpty
-            && meaningful.allSatisfy { shown[$0] != buffer[$0].produced }
-
-        var replacement = ""
-        var updated: [String] = []
-        var targetCache: [String: TISInputSource] = [:]
-        var finalSource: TISInputSource?
-
-        for index in extent {
-            let stroke = buffer[index]
-            let piece: String
-            if allConverted {
-                piece = stroke.produced
-                finalSource = Layouts.source(withID: stroke.sourceID)
-            } else {
-                let target: TISInputSource
-                if let cached = targetCache[stroke.sourceID] {
-                    target = cached
-                } else {
-                    guard let origin = Layouts.source(withID: stroke.sourceID),
-                          let pair = Layouts.counterpart(of: origin) else { return }
-                    targetCache[stroke.sourceID] = pair
-                    target = pair
-                }
-                guard let converted = Layouts.translate(stroke.keyCode, stroke.modifierState, with: target) else { return }
-                piece = converted
-                finalSource = target
-            }
-            replacement += piece
-            updated.append(piece)
-        }
-        guard !replacement.isEmpty else { return }
-
-        let deleteCount = extent.reduce(0) { $0 + shown[$1].count }
-        if let source = finalSource { Layouts.select(source) }
+        selectLayout(for: MappingPair.dominantScript(of: converted))
 
         // Дать системе применить раскладку прежде, чем печатать.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             guard let self else { return }
-            self.sendBackspaces(deleteCount)
-            self.sendText(replacement)
-            for (offset, index) in extent.enumerated() { self.shown[index] = updated[offset] }
+            self.sendBackspaces(fragment.count)
+            self.sendText(converted)
+            self.typed.replaceSubrange(start..., with: Array(converted))
             self.lastConvertAt = CFAbsoluteTimeGetCurrent()
         }
     }
@@ -345,7 +366,7 @@ final class Engine {
         for _ in 0..<count {
             post(CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_Delete), keyDown: true))
             post(CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_Delete), keyDown: false))
-            usleep(1500)
+            usleep(3000)
         }
     }
 
@@ -359,7 +380,7 @@ final class Engine {
             let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
             up?.keyboardSetUnicodeString(stringLength: units.count, unicodeString: &units)
             post(up)
-            usleep(1500)
+            usleep(3000)
         }
     }
 }
@@ -371,7 +392,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var loginItem: NSMenuItem!
 
     /// Значок в строке меню. Любое имя из SF Symbols — посмотреть можно в SF Symbols.app.
-    private static let symbolName = "repeat.circle.fill"
+    private static let symbolName = "circle.and.line.horizontal.fill"
     /// Значок, когда нет доступа к клавиатуре.
     private static let alertSymbolName = "exclamationmark.triangle"
 

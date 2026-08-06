@@ -5,109 +5,82 @@ import Foundation
 var failures = 0
 var checks = 0
 
-let RU = "com.apple.keylayout.RussianWin"
-let EN = "com.apple.keylayout.ABC"
-
-/// Собирает вход из строки. Раскладка задаётся посимвольно вторым аргументом,
-/// где каждый символ — 'r' или 'e'; если он короче, хвост считается той же раскладкой.
-func input(_ text: String, _ langs: String) -> ([String], [String]) {
-    let shown = text.map { String($0) }
-    var ids: [String] = []
-    let marks = Array(langs)
-    for i in 0..<shown.count {
-        let m = i < marks.count ? marks[i] : (marks.last ?? "r")
-        ids.append(m == "e" ? EN : RU)
-    }
-    return (shown, ids)
-}
-
-func expect(_ label: String, _ got: [Int], _ want: [Int]) {
+func check(_ label: String, _ got: Any, _ want: Any) {
     checks += 1
-    if got != want {
+    if "\(got)" != "\(want)" {
         failures += 1
-        print("✗ \(label)\n    получено: \(got)\n    ожидалось: \(want)")
+        print("✗ \(label)\n    получено:  \(got)\n    ожидалось: \(want)")
     } else {
         print("✓ \(label)  \(got)")
     }
 }
 
-// MARK: - Одно слово
+func starts(_ s: String) -> [Int] { Extent.starts(in: Array(s)) }
 
-do {
-    let (s, l) = input("привет", "r")
-    // всё слово — оно же предложение, оно же строка: границы схлопываются в одну
-    expect("одно слово", Extent.starts(shown: s, sourceIDs: l), [0])
+// MARK: - Границы охвата
+
+print("--- границы ---")
+
+check("одно слово", starts("привет"), [0])
+check("два слова", starts("привет мир"), [7, 0])
+check("хвостовой пробел", starts("привет мир "), [7, 0])
+
+// "Раз. Два три" — слово с 9, предложение с 5 (пробел после точки пропущен)
+check("предложение", starts("Раз. Два три"), [9, 5, 0])
+
+// смена алфавита совпала со словом
+check("смена алфавита = слово", starts("да ghjdthrf"), [3, 0])
+
+// смена алфавита шире слова
+check("смена алфавита шире слова", starts("да ghjd thrf"), [8, 3, 0])
+
+// все четыре границы различаются
+check("четыре разные границы", starts("Раз. да ghjd thrf"), [13, 8, 5, 0])
+
+// знаки препинания не должны считаться сменой алфавита
+check("запятая не рвёт алфавит", starts("привет, мир"), [8, 0])
+
+check("пустой ввод", starts(""), [])
+check("только пробелы", starts("   "), [])
+check("знак в конце", starts("привет!"), [0])
+
+// MARK: - Таблица соответствий
+
+print("\n--- таблица соответствий ---")
+
+// Игрушечные раскладки: три клавиши, без Shift и с ним.
+let latinKeys: [UInt16: (String, String)] = [0: ("q", "Q"), 1: ("w", "W"), 2: (".", ">")]
+let cyrKeys:   [UInt16: (String, String)] = [0: ("й", "Й"), 1: ("ц", "Ц"), 2: ("ю", "Ю")]
+
+func lookup(_ table: [UInt16: (String, String)]) -> (UInt16, UInt32) -> String? {
+    { code, mods in
+        guard let entry = table[code] else { return nil }
+        return mods == 0 ? entry.0 : entry.1
+    }
 }
 
-// MARK: - Два слова
+let toCyr = Mapping(from: lookup(latinKeys), to: lookup(cyrKeys))
+let toLat = Mapping(from: lookup(cyrKeys), to: lookup(latinKeys))
 
-do {
-    let (s, l) = input("привет мир", "r")
-    // слово -> вся строка
-    expect("два слова", Extent.starts(shown: s, sourceIDs: l), [7, 0])
-}
+check("латиница → кириллица", toCyr.convert("qw"), "йц")
+check("с учётом регистра", toCyr.convert("QW"), "ЙЦ")
+check("кириллица → латиница", toLat.convert("йц"), "qw")
+check("знак препинания тоже перебивается", toCyr.convert("."), "ю")
+check("незнакомый символ не трогаем", toCyr.convert("q1w"), "й1ц")
 
-// MARK: - Хвостовой пробел не должен съедать границу
+let pair = MappingPair(latinToCyrillic: toCyr, cyrillicToLatin: toLat)
+check("направление по преобладанию: латиница", pair.convert("qw"), "йц")
+check("направление по преобладанию: кириллица", pair.convert("йц"), "qw")
+check("цифры при кириллице", pair.convert("йц1"), "qw1")
 
-do {
-    let (s, l) = input("привет мир ", "r")
-    expect("хвостовой пробел", Extent.starts(shown: s, sourceIDs: l), [7, 0])
-}
+// MARK: - Определение алфавита
 
-// MARK: - Предложение
+print("\n--- алфавит ---")
 
-do {
-    let (s, l) = input("Раз. Два три", "r")
-    //                  0123456789..
-    // слово = "три" (9), предложение = после точки (4), строка = 0
-    expect("предложение", Extent.starts(shown: s, sourceIDs: l), [9, 4, 0])
-}
-
-// MARK: - Смена раскладки
-
-do {
-    // "да " по-русски, дальше латиница
-    let (s, l) = input("да ghjdthrf", "rrreeeeeeee")
-    // слово = 3, смена языка = 3 (совпадает, схлопнется), строка = 0
-    expect("смена раскладки совпала со словом",
-           Extent.starts(shown: s, sourceIDs: l), [3, 0])
-}
-
-do {
-    // по-русски "да ", затем два латинских слова
-    let (s, l) = input("да ghjd thrf", "rrreeeeeeeee")
-    // слово = 8, смена языка = 3, строка = 0
-    expect("смена раскладки шире слова",
-           Extent.starts(shown: s, sourceIDs: l), [8, 3, 0])
-}
-
-// MARK: - Все четыре границы различаются
-
-do {
-    let (s, l) = input("Раз. да ghjd thrf", "rrrrrrrreeeeeeeee")
-    //                  01234567890123456
-    // слово = 13, смена языка = 8, предложение = 4, строка = 0
-    expect("четыре разные границы",
-           Extent.starts(shown: s, sourceIDs: l), [13, 8, 4, 0])
-}
-
-// MARK: - Вырожденные случаи
-
-do {
-    expect("пустой ввод", Extent.starts(shown: [], sourceIDs: []), [])
-}
-
-do {
-    let (s, l) = input("   ", "r")
-    expect("только пробелы", Extent.starts(shown: s, sourceIDs: l), [])
-}
-
-do {
-    let (s, l) = input("привет!", "r")
-    // терминатор в самом конце: contentEnd указывает на него,
-    // поэтому предложение = вся строка
-    expect("знак в конце", Extent.starts(shown: s, sourceIDs: l), [0])
-}
+check("кириллица", "\(MappingPair.dominantScript(of: "привет"))", "cyrillic")
+check("латиница", "\(MappingPair.dominantScript(of: "hello"))", "latin")
+check("только цифры", "\(MappingPair.dominantScript(of: "123"))", "other")
+check("смесь с перевесом", "\(MappingPair.dominantScript(of: "привет hi"))", "cyrillic")
 
 // MARK: - Итог
 

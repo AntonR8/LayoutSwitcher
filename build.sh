@@ -8,7 +8,8 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 swiftc -O -swift-version 5 \
     -o "$APP/Contents/MacOS/LayoutSwitcher" \
-    "$DIR/Sources/Extent.swift" "$DIR/Sources/main.swift" \
+    "$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" \
+    "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift" \
     -framework Cocoa -framework Carbon -framework ServiceManagement
 
 cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
