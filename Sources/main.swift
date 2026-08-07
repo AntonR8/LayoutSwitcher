@@ -439,6 +439,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
 
         refreshLoginState()
+
+        // Gatekeeper запускает скачанное приложение из случайной папки только для
+        // чтения (App Translocation), пока его не перенесли в Finder. Путь меняется
+        // при каждом запуске, поэтому выданный «Универсальный доступ» перестаёт
+        // действовать, а автозапуск не регистрируется. Снаружи это выглядит как
+        // «разрешения дал, значок есть, ничего не работает» — предупреждаем сразу.
+        if Self.isTranslocated() {
+            FileHandle.standardError.write(Data("LayoutSwitcher: запущен из временной копии (App Translocation), путь \(Bundle.main.bundlePath)\n".utf8))
+            let alert = NSAlert()
+            alert.messageText = "Перенесите LayoutSwitcher в «Программы»"
+            alert.informativeText = """
+                Сейчас программа запущена из временной папки: macOS так поступает \
+                со скачанными приложениями, пока их не перенесли.
+
+                В этом режиме выданный доступ к клавиатуре слетает при каждом \
+                запуске, а автозапуск не работает.
+
+                Перетащите LayoutSwitcher.app в «Программы» через Finder и \
+                запустите оттуда.
+                """
+            alert.addButton(withTitle: "Понятно")
+            alert.runModal()
+        }
+
         requestAccessibilityIfNeeded()
 
         Engine.shared.startOrWaitForPermission()
@@ -461,6 +485,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 timer.invalidate()
             }
         }
+    }
+
+    /// Запущены ли мы из читаемой только временной копии, которую делает Gatekeeper.
+    /// Проверяем путь, а не SecTranslocateIsTranslocatedURL: тот требует, чтобы
+    /// вызывающий процесс сам был translocated-совместим, и в песочнице шумит.
+    private static func isTranslocated() -> Bool {
+        Bundle.main.bundlePath.contains("/AppTranslocation/")
     }
 
     private func requestAccessibilityIfNeeded() {
