@@ -12,10 +12,6 @@
 
 ## 📥 [Скачать LayoutSwitcher.zip](https://github.com/AntonR8/LayoutSwitcher/releases/latest/download/LayoutSwitcher.zip)
 
-Готовое приложение — по ссылке выше или на вкладке [Releases](https://github.com/AntonR8/LayoutSwitcher/releases/latest).
-
-> ⚠️ **Зелёная кнопка «Code → Download ZIP» вверху страницы — это не то.** Она отдаёт исходный код, приложения внутри нет. Качай по ссылке выше.
-
 Нужна macOS 13 или новее. Работает и на Apple Silicon, и на Intel.
 
 ---
