@@ -267,6 +267,46 @@ final class Engine {
         }
     }
 
+    // MARK: Диагностика
+
+    /// Состояние всех узлов, на которых перебивка может молча остановиться.
+    /// Каждая строка отвечает на вопрос «а этот шаг вообще отработал?».
+    func diagnostics() -> String {
+        var out: [String] = []
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        out.append("LayoutSwitcher \(version)")
+        out.append("путь: \(Bundle.main.bundlePath)")
+        out.append("доступ к клавиатуре: \(AXIsProcessTrusted() ? "есть" : "НЕТ")")
+        out.append("перехват событий: \(tap != nil ? "поднят" : "НЕ ПОДНЯТ")")
+
+        let sources = Layouts.enabled()
+        out.append("включённых раскладок: \(sources.count)")
+        for s in sources {
+            out.append("  • \(Layouts.identifier(s)) — \(Layouts.isASCII(s) ? "латинская" : "нелатинская")")
+        }
+
+        guard let (latin, other) = Layouts.pair() else {
+            out.append("ПАРА РАСКЛАДОК НЕ СОБРАНА — нужна одна латинская и одна нелатинская")
+            return out.joined(separator: "\n")
+        }
+        out.append("пара: \(Layouts.identifier(latin)) ↔ \(Layouts.identifier(other))")
+
+        guard let pair = mappings() else {
+            out.append("ТАБЛИЦЫ НЕ ПОСТРОИЛИСЬ")
+            return out.joined(separator: "\n")
+        }
+        out.append("таблица лат→нелат: \(pair.latinToCyrillic.forward.count) символов")
+        out.append("таблица нелат→лат: \(pair.cyrillicToLatin.forward.count) символов")
+        out.append("проверка «ghjdthrf» → «\(pair.convert("ghjdthrf"))»")
+
+        if let field = AXText.read() {
+            out.append("чтение поля: работает, в фокусе \(field.text.count) симв., каретка \(field.caret)")
+        } else {
+            out.append("чтение поля: НЕТ (это нормально, если отчёт вызван из меню)")
+        }
+        return out.joined(separator: "\n")
+    }
+
     // MARK: Перебивка
 
     /// - Parameter expanding: `false` — всегда начинать со слова (вызов из меню).
@@ -430,6 +470,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(hint)
         menu.addItem(.separator())
 
+        let diag = NSMenuItem(title: "Скопировать диагностику", action: #selector(copyDiagnostics), keyEquivalent: "")
+        diag.target = self
+        menu.addItem(diag)
+        menu.addItem(.separator())
+
         loginItem = NSMenuItem(title: "Запускать при входе", action: #selector(toggleLogin), keyEquivalent: "")
         loginItem.target = self
         menu.addItem(loginItem)
@@ -503,6 +548,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Engine.shared.convert(expanding: false)
     }
 
+    /// Отчёт о состоянии — чтобы не гадать по переписке, почему «ничего не работает».
+    /// Кладём в буфер обмена: человеку остаётся вставить его в сообщение.
+    @objc private func copyDiagnostics() {
+        let report = Engine.shared.diagnostics()
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(report, forType: .string)
+
+        let alert = NSAlert()
+        alert.messageText = "Отчёт скопирован"
+        alert.informativeText = "Вставьте его в сообщение — по нему видно, что именно не работает.\n\n" + report
+        alert.addButton(withTitle: "ОК")
+        alert.runModal()
+    }
+
     @objc private func toggleLogin() {
         do {
             if SMAppService.mainApp.status == .enabled {
@@ -519,6 +578,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func refreshLoginState() {
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
     }
+}
+
+// Тот же отчёт, что и в меню, но без запуска интерфейса — чтобы его можно было
+// получить из Терминала:  /Applications/LayoutSwitcher.app/Contents/MacOS/LayoutSwitcher --diagnostics
+if CommandLine.arguments.contains("--diagnostics") {
+    print(Engine.shared.diagnostics())
+    exit(0)
 }
 
 let app = NSApplication.shared
