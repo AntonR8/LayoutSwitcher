@@ -6,6 +6,10 @@
 	<string>LayoutSwitcher</string>
 	<key>CFBundleExecutable</key>
 	<string>LayoutSwitcher</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.anton.layoutswitcher</string>
 	<key>CFBundleName</key>

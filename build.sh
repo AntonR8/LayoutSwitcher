@@ -32,6 +32,29 @@ rm -f "$DIR/build/LayoutSwitcher-arm64" "$DIR/build/LayoutSwitcher-x86_64"
 
 cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 
+# Значок приложения. Собирается из одного PNG 1024×1024 (Assets/icon.png):
+# .icns нужен в десяти размерах, и держать их в репозитории по отдельности
+# незачем — sips уменьшит сам. Формат .icns, а не .icon из Icon Composer:
+# .icon понимает только macOS 26, а сборка рассчитана на 13.0 и старше.
+ICON_SRC="$DIR/Assets/icon.png"
+if [ -f "$ICON_SRC" ]; then
+    SIZE=$(sips -g pixelWidth "$ICON_SRC" | awk '/pixelWidth/{print $2}')
+    [ "$SIZE" -ge 1024 ] || echo "⚠️  Assets/icon.png шириной ${SIZE}px, нужно 1024 — значок будет мылить" >&2
+
+    ICONSET="$DIR/build/AppIcon.iconset"
+    mkdir -p "$ICONSET"
+    for PAIR in "16 16x16" "32 16x16@2x" "32 32x32" "64 32x32@2x" "128 128x128" \
+                "256 128x128@2x" "256 256x256" "512 256x256@2x" "512 512x512" "1024 512x512@2x"; do
+        set -- $PAIR
+        sips -z "$1" "$1" "$ICON_SRC" --out "$ICONSET/icon_$2.png" >/dev/null 2>&1
+    done
+    iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+    rm -rf "$ICONSET"
+    echo "значок: AppIcon.icns"
+else
+    echo "⚠️  Assets/icon.png не найден — приложение соберётся без значка" >&2
+fi
+
 # Подпись стабильным сертификатом: designated requirement перестаёт зависеть от
 # хеша бинаря, поэтому выданный доступ к Универсальному доступу переживает пересборку.
 # Сменится сертификат — доступ придётся выдать заново, это нормально и ожидаемо.
