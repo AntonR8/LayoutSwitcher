@@ -32,10 +32,30 @@ rm -f "$DIR/build/LayoutSwitcher-arm64" "$DIR/build/LayoutSwitcher-x86_64"
 
 cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 
-# Значок приложения. Собирается из одного PNG 1024×1024 (Assets/icon.png):
-# .icns нужен в десяти размерах, и держать их в репозитории по отдельности
-# незачем — sips уменьшит сам. Формат .icns, а не .icon из Icon Composer:
-# .icon понимает только macOS 26, а сборка рассчитана на 13.0 и старше.
+# Значок приложения собирается в двух видах, потому что одного не хватает.
+#
+# Assets/AppIcon.icon — документ Icon Composer. actool превращает его в
+# Assets.car, откуда macOS 26 берёт «живой» значок со всеми эффектами.
+# Побочно actool кладёт и AppIcon.icns, но он обрезан по 256×256 — это
+# запасной вариант Apple, и в Finder на крупных размерах он мылит.
+#
+# Assets/icon.png — плоская отрисовка того же значка в 1024×1024, из неё
+# ниже собирается полноразмерный .icns для macOS 13…15, где .icon не
+# поддерживается. Файл перекрывает обрезанный .icns от actool.
+ICON_DOC="$DIR/Assets/AppIcon.icon"
+if [ -d "$ICON_DOC" ] && xcrun --find actool >/dev/null 2>&1; then
+    actool "$ICON_DOC" --compile "$APP/Contents/Resources" --app-icon AppIcon \
+        --output-partial-info-plist "$DIR/build/icon-partial.plist" \
+        --platform macosx --minimum-deployment-target "$DEPLOY" >/dev/null 2>&1
+    if [ -f "$APP/Contents/Resources/Assets.car" ]; then
+        echo "значок: Assets.car (macOS 26)"
+    else
+        echo "⚠️  actool не собрал Assets.car — на macOS 26 значок будет обычным" >&2
+    fi
+elif [ -d "$ICON_DOC" ]; then
+    echo "⚠️  нет actool (нужен Xcode) — Assets.car не собран" >&2
+fi
+
 ICON_SRC="$DIR/Assets/icon.png"
 if [ -f "$ICON_SRC" ]; then
     SIZE=$(sips -g pixelWidth "$ICON_SRC" | awk '/pixelWidth/{print $2}')
@@ -50,7 +70,7 @@ if [ -f "$ICON_SRC" ]; then
     done
     iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
     rm -rf "$ICONSET"
-    echo "значок: AppIcon.icns"
+    echo "значок: AppIcon.icns (полноразмерный, для macOS 13…15)"
 else
     echo "⚠️  Assets/icon.png не найден — приложение соберётся без значка" >&2
 fi
