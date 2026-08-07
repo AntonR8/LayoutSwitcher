@@ -392,7 +392,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var loginItem: NSMenuItem!
 
     /// Значок в строке меню. Любое имя из SF Symbols — посмотреть можно в SF Symbols.app.
-    private static let symbolName = "circle.and.line.horizontal.fill"
+    /// Тот же символ, что и в значке приложения, чтобы программа опознавалась одинаково
+    /// в строке меню, в Finder и в списке «Универсального доступа».
+    /// Доступен с macOS 11.0 — ниже LSMinimumSystemVersion, так что запасной путь не нужен.
+    private static let symbolName = "keyboard.macwindow"
     /// Значок, когда нет доступа к клавиатуре.
     private static let alertSymbolName = "exclamationmark.triangle"
 
