@@ -36,36 +36,43 @@ cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 # хеша бинаря, поэтому выданный доступ к Универсальному доступу переживает пересборку.
 # Сменится сертификат — доступ придётся выдать заново, это нормально и ожидаемо.
 #
-# Конкретный сертификат можно задать снаружи: SIGN_ID=<отпечаток> ./build.sh
-# Иначе берём первый неотозванный, предпочитая Developer ID (с ним сборку можно
-# нотаризовать и раздавать без плясок с карантином).
-pick_identity() {
-    local list preferred
-    list=$(security find-identity -v -p codesigning 2>/dev/null | grep -v REVOKED || true)
-    preferred=$(echo "$list" | grep "Developer ID Application" | grep -oE '[0-9A-F]{40}' | head -1)
-    if [ -n "$preferred" ]; then
-        echo "$preferred"
-    else
-        echo "$list" | grep -oE '[0-9A-F]{40}' | head -1
-    fi
+# Конкретный сертификат задаётся снаружи: SIGN_ID=<отпечаток> ./build.sh
+#
+# ВАЖНО про отозванные сертификаты. Подписать отозванным сертификатом — хуже,
+# чем не подписывать вовсе: macOS считает такую сборку вредоносом, показывает
+# «Malware Blocked and Moved to Trash» и молча переносит приложение в Корзину.
+# Обойти это пользователь не может никак. Ad-hoc в этом смысле безопаснее:
+# Gatekeeper всего лишь просит подтвердить запуск.
+#
+# Верить `security find-identity` тут нельзя: он показывает закешированный
+# статус и спокойно отдаёт как «валидный» сертификат, отозванный Apple.
+# Единственная надёжная проверка — подписать и спросить Gatekeeper.
+sign_is_revoked() {
+    spctl -a -t exec "$APP" 2>&1 | grep -q "CSSMERR_TP_CERT_REVOKED"
 }
 
 if [ -n "$SIGN_ID" ]; then
-    if ! security find-identity -v -p codesigning | grep -v REVOKED | grep -q "$SIGN_ID"; then
-        echo "❌ сертификат $SIGN_ID не найден или отозван" >&2
-        exit 1
+    codesign --force --options runtime --sign "$SIGN_ID" "$APP"
+    if sign_is_revoked; then
+        echo "❌ сертификат $SIGN_ID ОТОЗВАН Apple." >&2
+        echo "   Сборка с ним будет опознана как вредонос и удалена в Корзину." >&2
+        echo "   Пересобираю с ad-hoc-подписью." >&2
+        SIGN_ID=""
+    else
+        echo "подписано: $(security find-identity -v -p codesigning | grep "$SIGN_ID" | sed 's/.*"\(.*\)".*/\1/')"
     fi
-else
-    SIGN_ID="$(pick_identity | head -1)"
 fi
 
-if [ -n "$SIGN_ID" ]; then
-    codesign --force --options runtime --sign "$SIGN_ID" "$APP"
-    echo "подписано: $(security find-identity -v -p codesigning | grep "$SIGN_ID" | sed 's/.*"\(.*\)".*/\1/')"
-else
-    echo "⚠️  сертификатов для подписи не найдено — подписываю ad-hoc;" >&2
-    echo "    доступ к Универсальному доступу придётся выдавать заново после каждой сборки" >&2
-    codesign --force --sign - "$APP"
+if [ -z "$SIGN_ID" ]; then
+    codesign --force --options runtime --sign - "$APP"
+    echo "подписано ad-hoc — доступ к Универсальному доступу придётся выдавать заново"
+    echo "после каждой пересборки: он привязан к подписи, а у ad-hoc она меняется."
+fi
+
+# Последний рубеж: не выпускать сборку, которую система удалит как вредонос.
+if sign_is_revoked; then
+    echo "❌ подпись всё ещё числится отозванной — сборка непригодна к распространению" >&2
+    exit 1
 fi
 
 echo "собрано: $APP"
