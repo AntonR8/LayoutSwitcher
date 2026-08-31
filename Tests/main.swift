@@ -48,9 +48,10 @@ check("знак в конце", starts("привет!"), [0])
 
 print("\n--- таблица соответствий ---")
 
-// Игрушечные раскладки: три клавиши, без Shift и с ним.
-let latinKeys: [UInt16: (String, String)] = [0: ("q", "Q"), 1: ("w", "W"), 2: (".", ">")]
-let cyrKeys:   [UInt16: (String, String)] = [0: ("й", "Й"), 1: ("ц", "Ц"), 2: ("ю", "Ю")]
+// Игрушечные раскладки: четыре клавиши, без Shift и с ним. Клавиши 2 и 3 повторяют
+// главную ловушку настоящих раскладок: «.» в русской и в латинской — разные клавиши.
+let latinKeys: [UInt16: (String, String)] = [0: ("q", "Q"), 1: ("w", "W"), 2: (".", ">"), 3: ("/", "?")]
+let cyrKeys:   [UInt16: (String, String)] = [0: ("й", "Й"), 1: ("ц", "Ц"), 2: ("ю", "Ю"), 3: (".", ",")]
 
 func lookup(_ table: [UInt16: (String, String)]) -> (UInt16, UInt32) -> String? {
     { code, mods in
@@ -72,6 +73,13 @@ let pair = MappingPair(latinToCyrillic: toCyr, cyrillicToLatin: toLat)
 check("направление по преобладанию: латиница", pair.convert("qw"), "йц")
 check("направление по преобладанию: кириллица", pair.convert("йц"), "qw")
 check("цифры при кириллице", pair.convert("йц1"), "qw1")
+
+// Букв нет — направление берём из fallback (алфавит включённой раскладки).
+check("одна точка на русской", pair.convert(".", fallback: .cyrillic), "/")
+check("одна точка на латинской", pair.convert(".", fallback: .latin), "ю")
+check("цифры со знаком на русской", pair.convert("12.", fallback: .cyrillic), "12/")
+check("буквы важнее fallback", pair.convert("qw", fallback: .cyrillic), "йц")
+check("fallback .other ничего не меняет", pair.convert(".", fallback: .other), ".")
 
 // MARK: - Определение алфавита
 

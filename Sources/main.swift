@@ -257,6 +257,14 @@ final class Engine {
         return pair
     }
 
+    /// Алфавит включённой сейчас раскладки. Нужен, когда в охвате нет ни одной
+    /// буквы («.», «123») и направление по содержимому не вывести: такой текст
+    /// набран в текущей раскладке, значит перебивать его надо из неё.
+    private func currentScript() -> Script {
+        guard let src = Layouts.current() else { return .latin }
+        return Layouts.isASCII(src) ? .latin : .cyrillic
+    }
+
     /// Переключить ввод под алфавит, который получился после перебивки.
     private func selectLayout(for script: Script) {
         guard let (latin, other) = Layouts.pair() else { return }
@@ -309,6 +317,22 @@ final class Engine {
 
     // MARK: Перебивка
 
+    /// Первый уровень охвата начиная с `level`, на котором перебивка что-то меняет.
+    /// Возвращает начало охвата, результат и номер уровня.
+    private func firstChange(in starts: [Int],
+                             from level: Int,
+                             using pair: MappingPair,
+                             fragment: (Int) -> String) -> (Int, String, Int)? {
+        let script = currentScript()
+        for level in min(level, starts.count - 1)..<starts.count {
+            let start = starts[level]
+            let text = fragment(start)
+            let converted = pair.convert(text, fallback: script)
+            if converted != text { return (start, converted, level) }
+        }
+        return nil
+    }
+
     /// - Parameter expanding: `false` — всегда начинать со слова (вызов из меню).
     func convert(expanding: Bool = true) {
         guard let pair = mappings() else { return }
@@ -346,12 +370,14 @@ final class Engine {
 
         let starts = Extent.starts(in: before)
         guard !starts.isEmpty else { return }
-        expansionLevel = min(expansionLevel, starts.count - 1)
 
-        let start = starts[expansionLevel]
-        let fragment = String(characters[start..<caret])
-        let converted = pair.convert(fragment)
-        guard converted != fragment else { return }
+        // Уровень, на котором перебивка ничего не меняет (охват вроде «!», одинаковый
+        // в обеих раскладках), пропускаем: иначе цепочка расширений на нём залипает.
+        guard let (start, converted, level) = firstChange(
+            in: starts, from: expansionLevel, using: pair,
+            fragment: { String(characters[$0..<caret]) }
+        ) else { return }
+        expansionLevel = level
 
         let result = String(characters[0..<start]) + converted + String(characters[caret...])
         guard AXText.write(field, text: result, caret: start + converted.count) else { return }
@@ -376,12 +402,13 @@ final class Engine {
 
         let starts = Extent.starts(in: typed)
         guard !starts.isEmpty else { return }
-        expansionLevel = min(expansionLevel, starts.count - 1)
 
-        let start = starts[expansionLevel]
+        guard let (start, converted, level) = firstChange(
+            in: starts, from: expansionLevel, using: pair,
+            fragment: { [typed] in String(typed[$0...]) }
+        ) else { return }
+        expansionLevel = level
         let fragment = String(typed[start...])
-        let converted = pair.convert(fragment)
-        guard converted != fragment else { return }
 
         selectLayout(for: MappingPair.dominantScript(of: converted))
 

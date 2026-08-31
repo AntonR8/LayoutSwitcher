@@ -76,11 +76,16 @@ struct MappingPair {
         return cyrillic > latin ? .cyrillic : .latin
     }
 
-    func convert(_ text: some StringProtocol) -> String {
-        switch Self.dominantScript(of: text) {
+    /// - Parameter fallback: чем считать текст, в котором букв нет вовсе (одна точка,
+    ///   цифры со знаками). Направление по содержимому не вывести, поэтому решает
+    ///   вызывающий — по включённой сейчас раскладке: в ней текст и набран.
+    func convert(_ text: some StringProtocol, fallback: Script = .latin) -> String {
+        var script = Self.dominantScript(of: text)
+        if script == .other { script = fallback }
+        switch script {
         case .cyrillic: return cyrillicToLatin.convert(text)
         case .latin:    return latinToCyrillic.convert(text)
-        case .other:    return latinToCyrillic.convert(text)
+        case .other:    return String(text)
         }
     }
 }
