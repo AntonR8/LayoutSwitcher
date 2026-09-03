@@ -30,12 +30,17 @@ enum Extent {
         // 1. Слово — назад до ближайшего пробела.
         var i = contentEnd - 1
         while i >= 0, !isBlank(text[i]) { i -= 1 }
-        result.append(i + 1)
+        let wordStart = i + 1
+        result.append(wordStart)
 
-        // 2. Предложение — назад до завершающего знака.
+        // 2. Предложение — назад до завершающего знака, но не ближе начала слова.
+        //    Знак внутри слова концом предложения не считается. Точка, набранная
+        //    в русской раскладке, — это символ клавиши «/», а не конец фразы:
+        //    граница по ней оставила бы её неперебитой («.dsdf» вместо «/dsdf»),
+        //    да ещё и раньше уровня «слово» — тот шире и должен идти первым.
         let terminators: Set<Character> = [".", "!", "?", "…"]
         var sentenceStart = 0
-        var j = contentEnd - 1
+        var j = wordStart - 1
         while j >= 0 {
             if terminators.contains(text[j]) { sentenceStart = j + 1; break }
             j -= 1
