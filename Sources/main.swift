@@ -96,6 +96,9 @@ final class Engine {
     /// перевернулось бы обратно.
     private var chainBase: String?
     private var lastWritten: String?
+    /// То же самое для запасного пути: буфер набранного до первой перебивки
+    /// в текущей цепочке. Сам `typed` по ходу цепочки хранит то, что на экране.
+    private var typedBase: [Character]?
 
     /// Пауза между двумя нажатиями Shift, при которой они считаются двойным.
     var doubleTapWindow: CFAbsoluteTime = 0.4
@@ -172,6 +175,7 @@ final class Engine {
         typed.removeAll()
         expansionLevel = 0
         chainBase = nil
+        typedBase = nil
     }
 
     private func handleFlags(_ event: CGEvent) {
@@ -204,6 +208,7 @@ final class Engine {
         keyPressedDuringShift = true
         expansionLevel = 0
         chainBase = nil
+        typedBase = nil
 
         let code = event.getIntegerValueField(.keyboardEventKeycode)
         let flags = event.flags
@@ -394,30 +399,45 @@ final class Engine {
         guard !typed.isEmpty else { return }
 
         let now = CFAbsoluteTimeGetCurrent()
-        if expanding && now - lastConvertAt < expandWindow {
+
+        // Цепочка расширений считается от текста до первой перебивки — так же,
+        // как на пути через Accessibility. Иначе следующий уровень перебивал бы
+        // уже перебитое: «.выва» → «.dsdf» → «ювыва».
+        let continues = expanding && now - lastConvertAt < expandWindow && typedBase != nil
+
+        let base: [Character]
+        if continues {
+            base = typedBase!
             expansionLevel += 1
         } else {
+            base = typed
+            typedBase = base
             expansionLevel = 0
         }
 
-        let starts = Extent.starts(in: typed)
+        let starts = Extent.starts(in: base)
         guard !starts.isEmpty else { return }
 
         guard let (start, converted, level) = firstChange(
             in: starts, from: expansionLevel, using: pair,
-            fragment: { [typed] in String(typed[$0...]) }
+            fragment: { String(base[$0...]) }
         ) else { return }
         expansionLevel = level
-        let fragment = String(typed[start...])
+
+        // Стираем то, что сейчас на экране, а не то, что было набрано: при
+        // расширении там уже лежит результат прошлого уровня. Длины совпадают —
+        // перебивка идёт символ в символ.
+        let onScreen = typed.count - start
+        guard onScreen >= 0 else { return }
 
         selectLayout(for: MappingPair.dominantScript(of: converted))
 
         // Дать системе применить раскладку прежде, чем печатать.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             guard let self else { return }
-            self.sendBackspaces(fragment.count)
+            self.sendBackspaces(onScreen)
             self.sendText(converted)
-            self.typed.replaceSubrange(start..., with: Array(converted))
+            self.typed = Array(base[0..<start]) + Array(converted)
             self.lastConvertAt = CFAbsoluteTimeGetCurrent()
         }
     }
