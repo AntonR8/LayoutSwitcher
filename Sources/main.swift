@@ -432,15 +432,19 @@ final class Engine {
     private func convertInField(_ field: AXText.Field, using pair: MappingPair, expanding: Bool) {
         let now = CFAbsoluteTimeGetCurrent()
 
-        // Цепочка расширений продолжается, только если с прошлого раза
-        // в поле ничего не менялось помимо нашей же записи.
-        let continues = expanding
-            && now - lastConvertAt < expandWindow
-            && chainBase != nil
-            && lastWritten == field.text
+        // В поле ровно наша прошлая перебивка и с тех пор ничего не набирали:
+        // любой ввод и клик мышью обнуляют chainBase.
+        let untouched = chainBase != nil && lastWritten == field.text
+        let action = ChainAction.decide(untouched: untouched, expanding: expanding,
+                                        elapsed: now - lastConvertAt, window: expandWindow)
+
+        if action == .undo, let previous = chainBase {
+            undoInField(field, to: previous)
+            return
+        }
 
         let base: String
-        if continues {
+        if action == .expand {
             base = chainBase!
             expansionLevel += 1
         } else {
@@ -472,6 +476,17 @@ final class Engine {
         selectLayout(for: MappingPair.dominantScript(of: converted))
     }
 
+    /// Вернуть поле к тому, что было до перебивки. Длина при перебивке не меняется
+    /// (символ в символ), поэтому каретка остаётся на месте.
+    private func undoInField(_ field: AXText.Field, to previous: String) {
+        guard AXText.write(field, text: previous, caret: min(field.caret, previous.count)) else { return }
+        chainBase = nil
+        lastWritten = nil
+        expansionLevel = 0
+        lastConvertAt = CFAbsoluteTimeGetCurrent()
+        selectLayout(for: MappingPair.dominantScript(of: previous))
+    }
+
     /// Запасной путь для полей, которые не отдают текст через Accessibility:
     /// стираем забоями и печатаем заново. Опирается на буфер набранного,
     /// поэтому в полях с автодополнением работает хуже.
@@ -483,10 +498,18 @@ final class Engine {
         // Цепочка расширений считается от текста до первой перебивки — так же,
         // как на пути через Accessibility. Иначе следующий уровень перебивал бы
         // уже перебитое: «.выва» → «.dsdf» → «ювыва».
-        let continues = expanding && now - lastConvertAt < expandWindow && typedBase != nil
+        // typedBase обнуляется на любом наборе, так что он же и признак того,
+        // что на экране по-прежнему наша перебивка.
+        let action = ChainAction.decide(untouched: typedBase != nil, expanding: expanding,
+                                        elapsed: now - lastConvertAt, window: expandWindow)
+
+        if action == .undo, let previous = typedBase, previous.count == typed.count {
+            undoByTyping(to: previous)
+            return
+        }
 
         let base: [Character]
-        if continues {
+        if action == .expand {
             base = typedBase!
             expansionLevel += 1
         } else {
@@ -518,6 +541,27 @@ final class Engine {
             self.sendBackspaces(onScreen)
             self.sendText(converted)
             self.typed = Array(base[0..<start]) + Array(converted)
+            self.lastConvertAt = CFAbsoluteTimeGetCurrent()
+        }
+    }
+
+    /// Возврат на запасном пути: стираем разошедшийся хвост и печатаем исходный.
+    private func undoByTyping(to previous: [Character]) {
+        var index = 0
+        while index < previous.count && previous[index] == typed[index] { index += 1 }
+        guard index < previous.count else { return }
+
+        let tail = String(previous[index...])
+        selectLayout(for: MappingPair.dominantScript(of: tail))
+
+        let erase = typed.count - index
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self else { return }
+            self.sendBackspaces(erase)
+            self.sendText(tail)
+            self.typed = previous
+            self.typedBase = nil
+            self.expansionLevel = 0
             self.lastConvertAt = CFAbsoluteTimeGetCurrent()
         }
     }

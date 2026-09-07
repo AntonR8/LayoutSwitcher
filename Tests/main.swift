@@ -17,6 +17,28 @@ func check(_ label: String, _ got: Any, _ want: Any) {
 
 func starts(_ s: String) -> [Int] { Extent.starts(in: Array(s)) }
 
+// MARK: - Развилка цепочки
+
+print("--- цепочка ---")
+
+func decide(_ untouched: Bool, _ expanding: Bool, _ elapsed: Double) -> ChainAction {
+    ChainAction.decide(untouched: untouched, expanding: expanding, elapsed: elapsed, window: 2.0)
+}
+
+// Внутри окна нажатия идут одной цепочкой и расширяют охват.
+check("в окне — расширяем", decide(true, true, 0.5), ChainAction.expand)
+
+// Окно истекло, но в поле по-прежнему наша перебивка: человек возвращает как было.
+// Повторная перебивка тут дала бы «.» → «/» → «|»: у знаков она не обратима.
+check("окно истекло — возвращаем", decide(true, true, 3.0), ChainAction.undo)
+
+// В поле набирали после перебивки — возвращать нечего.
+check("текст трогали — заново", decide(false, true, 0.5), ChainAction.fresh)
+check("текст трогали, окно истекло — заново", decide(false, true, 3.0), ChainAction.fresh)
+
+// Вызов из меню всегда бьёт последнее слово и ничего не возвращает.
+check("из меню — заново", decide(true, false, 3.0), ChainAction.fresh)
+
 // MARK: - Границы охвата
 
 print("--- границы ---")

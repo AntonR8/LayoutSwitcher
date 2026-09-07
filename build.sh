@@ -9,7 +9,7 @@ APP="$DIR/build/LayoutSwitcher.app"
 # молча получает minos = версии сборочной машины.
 DEPLOY="13.0"
 
-SRC=("$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" \
+SRC=("$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" "$DIR/Sources/Chain.swift" \
      "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
 
 rm -rf "$DIR/build"
