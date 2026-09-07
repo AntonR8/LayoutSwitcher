@@ -127,7 +127,7 @@ final class Engine {
         if start() { return }
         retryTimer?.invalidate()
         retryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-            guard AXIsProcessTrusted(), let self else { return }
+            guard let self else { timer.invalidate(); return }
             if self.start() {
                 timer.invalidate()
                 self.retryTimer = nil
@@ -137,6 +137,18 @@ final class Engine {
 
     @discardableResult
     func start() -> Bool {
+        // Без доступа к клавиатуре tapCreate всё равно отдаёт порт — но перехватчик
+        // приходит выключенным и без клавиатурных событий. Если считать это успехом,
+        // ожидание разрешения заканчивается, выданный потом доступ никто не подхватит,
+        // и программа молча не работает до перезапуска. Поэтому спрашиваем заранее.
+        guard AXIsProcessTrusted() else { return false }
+
+        if let old = tap {
+            CGEvent.tapEnable(tap: old, enable: false)
+            CFMachPortInvalidate(old)
+            tap = nil
+        }
+
         let mask = (1 << CGEventType.keyDown.rawValue)
                  | (1 << CGEventType.flagsChanged.rawValue)
                  | (1 << CGEventType.leftMouseDown.rawValue)
@@ -154,10 +166,18 @@ final class Engine {
             return false
         }
 
-        self.tap = tap
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+
+        // Последняя проверка: перехватчик, созданный без прав, включиться не может.
+        guard CGEvent.tapIsEnabled(tap: tap) else {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+            CFMachPortInvalidate(tap)
+            return false
+        }
+
+        self.tap = tap
         return true
     }
 
@@ -348,7 +368,8 @@ final class Engine {
         out.append("LayoutSwitcher \(version)")
         out.append("путь: \(Bundle.main.bundlePath)")
         out.append("доступ к клавиатуре: \(AXIsProcessTrusted() ? "есть" : "НЕТ")")
-        out.append("перехват событий: \(tap != nil ? "поднят" : "НЕ ПОДНЯТ")")
+        let tapUp = tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false
+        out.append("перехват событий: \(tapUp ? "поднят" : "НЕ ПОДНЯТ")")
         out.append("короткий левый Shift меняет раскладку: \(switchLayoutOnLeftShiftTap ? "да" : "нет")")
 
         let sources = Layouts.enabled()
