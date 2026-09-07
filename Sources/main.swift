@@ -537,6 +537,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var loginItem: NSMenuItem!
     private var leftShiftItem: NSMenuItem!
+    /// Пункт-предупреждение «нет доступа». Появляется в меню, пока доступа нет.
+    private var accessItem: NSMenuItem?
 
     /// Ключ настройки «короткий левый Shift меняет раскладку».
     private static let leftShiftKey = "SwitchLayoutOnLeftShiftTap"
@@ -631,23 +633,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Engine.shared.startOrWaitForPermission()
 
-        if !AXIsProcessTrusted() {
-            setSymbol(Self.alertSymbolName)
-            let alert = NSAlert()
-            alert.messageText = "Нужен доступ к клавиатуре"
-            alert.informativeText = "Откройте Настройки → Конфиденциальность и безопасность → Универсальный доступ и включите LayoutSwitcher. Перезапускать программу не нужно — она подхватит разрешение сама."
-            alert.addButton(withTitle: "Открыть настройки")
-            alert.addButton(withTitle: "Позже")
-            if alert.runModal() == .alertFirstButtonReturn,
-               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                NSWorkspace.shared.open(url)
+        if !AXIsProcessTrusted() { showAccessWarning() }
+    }
+
+    /// Пока доступа нет: треугольник в строке меню и пункт с объяснением.
+    /// Своего окна тут не показываем — система в этот момент уже показывает
+    /// собственный запрос, и два окна встают друг на друга: наше перекрывает
+    /// системное, а нажать надо именно системное.
+    private func showAccessWarning() {
+        setSymbol(Self.alertSymbolName)
+
+        if accessItem == nil, let menu = statusItem.menu {
+            let item = NSMenuItem(title: "Нет доступа к клавиатуре — выдать…",
+                                  action: #selector(explainAccess), keyEquivalent: "")
+            item.target = self
+            menu.insertItem(item, at: 0)
+            menu.insertItem(.separator(), at: 1)
+            accessItem = item
+        }
+
+        // Вернуть обычный значок и убрать предупреждение, когда доступ появится.
+        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+            guard AXIsProcessTrusted(), let self else { return }
+            self.setSymbol(Self.symbolName)
+            self.clearAccessWarning()
+            timer.invalidate()
+        }
+    }
+
+    private func clearAccessWarning() {
+        guard let item = accessItem, let menu = statusItem.menu else { return }
+        let index = menu.index(of: item)
+        if index >= 0 {
+            if index + 1 < menu.numberOfItems, menu.item(at: index + 1)?.isSeparatorItem == true {
+                menu.removeItem(at: index + 1)
             }
-            // Вернуть обычный значок, когда доступ появится.
-            Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-                guard AXIsProcessTrusted() else { return }
-                self?.setSymbol(Self.symbolName)
-                timer.invalidate()
-            }
+            menu.removeItem(at: index)
+        }
+        accessItem = nil
+    }
+
+    /// Объяснение по требованию — когда системный запрос уже закрыт или больше
+    /// не появляется (система показывает его один раз, отказ она запоминает).
+    @objc private func explainAccess() {
+        let alert = NSAlert()
+        alert.messageText = "Нужен доступ к клавиатуре"
+        alert.informativeText = "Откройте Настройки → Конфиденциальность и безопасность → Универсальный доступ и включите LayoutSwitcher. Перезапускать программу не нужно — она подхватит разрешение сама."
+        alert.addButton(withTitle: "Открыть настройки")
+        alert.addButton(withTitle: "Позже")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
         }
     }
 
