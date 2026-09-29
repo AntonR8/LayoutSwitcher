@@ -120,6 +120,47 @@ check("латиница", "\(MappingPair.dominantScript(of: "hello"))", "latin")
 check("только цифры", "\(MappingPair.dominantScript(of: "123"))", "other")
 check("смесь с перевесом", "\(MappingPair.dominantScript(of: "привет hi"))", "cyrillic")
 
+// MARK: - Нажатия Shift
+
+print("\n--- нажатия Shift ---")
+
+/// Прогоняет нажатия [(нажали, отпустили)] и возвращает результат каждого отпускания.
+func taps(_ presses: [(Double, Double)], interruptAt: Int? = nil) -> [ShiftTap.Result] {
+    var t = ShiftTap()
+    return presses.enumerated().map { i, p in
+        t.down(at: p.0)
+        if i == interruptAt { t.interrupt() }
+        return t.up(at: p.1)
+    }
+}
+
+check("короткое нажатие", taps([(0, 0.1)]), [ShiftTap.Result.single])
+check("удержание — не нажатие", taps([(0, 0.6)]), [ShiftTap.Result.none])
+check("два быстрых — двойное", taps([(0, 0.1), (0.3, 0.4)]), [ShiftTap.Result.single, .double])
+check("два с паузой — два одиночных", taps([(0, 0.1), (0.8, 0.9)]), [ShiftTap.Result.single, .single])
+check("третье после двойного — снова одиночное",
+      taps([(0, 0.1), (0.2, 0.3), (0.4, 0.5)]), [ShiftTap.Result.single, .double, .single])
+check("Shift+буква — не нажатие", taps([(0, 0.1)], interruptAt: 0), [ShiftTap.Result.none])
+check("после Shift+буквы двойного нет",
+      taps([(0, 0.1), (0.2, 0.3)], interruptAt: 0), [ShiftTap.Result.none, .single])
+check("удержание не становится первым в двойном",
+      taps([(0, 0.6), (0.7, 0.8)]), [ShiftTap.Result.none, .single])
+
+do {
+    var t = ShiftTap()
+    t.down(at: 0, otherModifiers: true)
+    check("Cmd+Shift — не нажатие", t.up(at: 0.1), ShiftTap.Result.none)
+}
+do {
+    // Левый зажат, правый нажали и отпустили, потом отпустили левый.
+    var t = ShiftTap()
+    t.down(at: 0)
+    t.down(at: 0.05)
+    let first = t.up(at: 0.1)
+    let second = t.up(at: 0.15)
+    check("два Shift разом — не нажатие", [first, second], [ShiftTap.Result.none, .none])
+}
+
 // MARK: - Итог
 
 print(String(repeating: "-", count: 46))

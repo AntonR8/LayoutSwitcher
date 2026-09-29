@@ -84,15 +84,11 @@ final class Engine {
     /// не отдаёт текст через Accessibility.
     private var typed: [Character] = []
 
-    private var lastShiftRelease: CFAbsoluteTime = 0
-    private var shiftHeld = false
-    private var keyPressedDuringShift = false
-    /// Какой Shift держат сейчас: 56 — левый, 60 — правый.
-    private var shiftCode: Int64 = 0
-    private var shiftPressedAt: CFAbsoluteTime = 0
-    /// Отложенная смена раскладки по короткому левому Shift. Ждёт `doubleTapWindow`:
-    /// если за это время придёт второй Shift, это двойной — раскладку не трогаем.
-    private var pendingLayoutToggle: DispatchWorkItem?
+    private var shiftTap = ShiftTap()
+    /// Раскладка до переключения одиночным Shift. Если следом пришло второе
+    /// нажатие, это был двойной Shift: возвращаем её перед перебивкой, чтобы
+    /// направление определялось по той раскладке, в которой набирали.
+    private var layoutBeforeSingleTap: TISInputSource?
 
     /// Насколько широко перебиваем: индекс в списке границ (0 — слово).
     private var expansionLevel = 0
@@ -106,13 +102,8 @@ final class Engine {
     /// в текущей цепочке. Сам `typed` по ходу цепочки хранит то, что на экране.
     private var typedBase: [Character]?
 
-    /// Пауза между двумя нажатиями Shift, при которой они считаются двойным.
-    var doubleTapWindow: CFAbsoluteTime = 0.4
-    /// Дольше этого Shift держали намеренно — это не «тап», а модификатор,
-    /// с которого просто передумали набирать. Раскладку по нему не меняем.
-    var maxTapHold: CFAbsoluteTime = 0.5
-    /// Короткое нажатие левого Shift переключает раскладку.
-    var switchLayoutOnLeftShiftTap = true
+    /// Короткое нажатие любого Shift переключает раскладку.
+    var switchLayoutOnShiftTap = true
     /// Сколько ждём следующего двойного Shift, чтобы расширить охват, а не начать заново.
     var expandWindow: CFAbsoluteTime = 2.0
 
@@ -192,6 +183,7 @@ final class Engine {
 
         switch type {
         case .leftMouseDown, .rightMouseDown:
+            shiftTap.interrupt()        // Shift+клик — выделение, а не нажатие
             reset()
         case .flagsChanged:
             handleFlags(event)
@@ -211,79 +203,61 @@ final class Engine {
 
     private func handleFlags(_ event: CGEvent) {
         let code = event.getIntegerValueField(.keyboardEventKeycode)
-        guard code == 56 || code == 60 else { return }   // левый / правый Shift
-
-        if event.flags.contains(.maskShift) {
-            shiftHeld = true
-            shiftCode = code
-            shiftPressedAt = CFAbsoluteTimeGetCurrent()
-            keyPressedDuringShift = false
-            return
-        }
-        guard shiftHeld else { return }
-        shiftHeld = false
-
-        // Shift использовали как модификатор — это не «тап».
-        if keyPressedDuringShift {
-            lastShiftRelease = 0
-            return
-        }
-        // Сочетание вроде Cmd+Shift: клавиши не было, но и текст тут не набирают.
-        if event.flags.contains(.maskCommand) || event.flags.contains(.maskControl)
-            || event.flags.contains(.maskAlternate) {
-            lastShiftRelease = 0
-            return
-        }
         let now = CFAbsoluteTimeGetCurrent()
-        if now - lastShiftRelease < doubleTapWindow {
-            lastShiftRelease = 0
-            cancelLayoutToggle()          // это двойной Shift, а не два одиночных
-            convert()
-        } else {
-            lastShiftRelease = now
-            if switchLayoutOnLeftShiftTap && code == 56 && now - shiftPressedAt < maxTapHold {
-                scheduleLayoutToggle()
+
+        // Другой модификатор при зажатом Shift — это сочетание.
+        guard code == 56 || code == 60 else {     // левый / правый Shift
+            shiftTap.interrupt()
+            return
+        }
+
+        let flags = event.flags
+        if flags.contains(.maskShift) && !releasedShift(code: code, flags: flags) {
+            let others = flags.contains(.maskCommand) || flags.contains(.maskControl)
+                      || flags.contains(.maskAlternate)
+            shiftTap.down(at: now, otherModifiers: others)
+            return
+        }
+
+        switch shiftTap.up(at: now) {
+        case .none:
+            layoutBeforeSingleTap = nil
+        case .single:
+            // Меняем сразу, не дожидаясь, будет ли второе нажатие: ожидание
+            // и есть та задержка, из-за которой переключение казалось медленным.
+            layoutBeforeSingleTap = nil
+            if switchLayoutOnShiftTap { toggleLayout() }
+        case .double:
+            if let previous = layoutBeforeSingleTap {
+                Layouts.select(previous)
+                layoutBeforeSingleTap = nil
             }
+            convert()
         }
     }
 
-    // MARK: Смена раскладки по короткому левому Shift
-
-    /// Отложить смену на окно двойного нажатия: первый Shift двойного тоже
-    /// приходит сюда, и раскладку по нему менять нельзя.
-    private func scheduleLayoutToggle() {
-        cancelLayoutToggle()
-        let work = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.pendingLayoutToggle = nil
-            self.toggleLayout()
-        }
-        pendingLayoutToggle = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapWindow, execute: work)
+    /// Флаг Shift остаётся, пока зажат хотя бы один из двух Shift, поэтому
+    /// отпускание одного при зажатом другом видно только по битам устройства.
+    private func releasedShift(code: Int64, flags: CGEventFlags) -> Bool {
+        let left: UInt64 = 0x02, right: UInt64 = 0x04   // NX_DEVICELSHIFTKEYMASK / RSHIFT
+        let bit = code == 56 ? left : right
+        return flags.rawValue & bit == 0
     }
 
-    private func cancelLayoutToggle() {
-        pendingLayoutToggle?.cancel()
-        pendingLayoutToggle = nil
-    }
-
-    /// Начали набирать, не дождавшись окна — переключить сразу, чтобы в старой
-    /// раскладке ушёл максимум один символ.
-    private func flushLayoutToggle() {
-        guard pendingLayoutToggle != nil else { return }
-        cancelLayoutToggle()
-        toggleLayout()
-    }
+    // MARK: Смена раскладки по короткому Shift
 
     /// Переключить ввод на другую раскладку из пары «латинская — нелатинская».
+    /// Напрямую через TIS, минуя системное сочетание клавиш с его задержкой
+    /// и всплывающим переключателем.
     func toggleLayout() {
         guard let (latin, other) = Layouts.pair(), let current = Layouts.current() else { return }
+        layoutBeforeSingleTap = current
         Layouts.select(Layouts.isASCII(current) ? other : latin)
     }
 
     private func handleKey(_ event: CGEvent) {
-        flushLayoutToggle()
-        keyPressedDuringShift = true
+        shiftTap.interrupt()
+        layoutBeforeSingleTap = nil
         expansionLevel = 0
         chainBase = nil
         typedBase = nil
@@ -370,7 +344,7 @@ final class Engine {
         out.append("доступ к клавиатуре: \(AXIsProcessTrusted() ? "есть" : "НЕТ")")
         let tapUp = tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false
         out.append("перехват событий: \(tapUp ? "поднят" : "НЕ ПОДНЯТ")")
-        out.append("короткий левый Shift меняет раскладку: \(switchLayoutOnLeftShiftTap ? "да" : "нет")")
+        out.append("короткий Shift меняет раскладку: \(switchLayoutOnShiftTap ? "да" : "нет")")
 
         let sources = Layouts.enabled()
         out.append("включённых раскладок: \(sources.count)")
@@ -601,12 +575,12 @@ final class Engine {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var loginItem: NSMenuItem!
-    private var leftShiftItem: NSMenuItem!
+    private var shiftTapItem: NSMenuItem!
     /// Пункт-предупреждение «нет доступа». Появляется в меню, пока доступа нет.
     private var accessItem: NSMenuItem?
 
-    /// Ключ настройки «короткий левый Shift меняет раскладку».
-    private static let leftShiftKey = "SwitchLayoutOnLeftShiftTap"
+    /// Ключ настройки «короткий Shift меняет раскладку».
+    private static let shiftTapKey = "SwitchLayoutOnShiftTap"
 
     /// Значок в строке меню. Любое имя из SF Symbols — посмотреть можно в SF Symbols.app.
     /// Тот же символ, что и в значке приложения, чтобы программа опознавалась одинаково
@@ -647,10 +621,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(hint)
         menu.addItem(.separator())
 
-        leftShiftItem = NSMenuItem(title: "Короткий левый Shift меняет раскладку",
-                                   action: #selector(toggleLeftShiftSwitch), keyEquivalent: "")
-        leftShiftItem.target = self
-        menu.addItem(leftShiftItem)
+        shiftTapItem = NSMenuItem(title: "Короткий Shift меняет раскладку",
+                                   action: #selector(toggleShiftTapSwitch), keyEquivalent: "")
+        shiftTapItem.target = self
+        menu.addItem(shiftTapItem)
         menu.addItem(.separator())
 
         let diag = NSMenuItem(title: "Скопировать диагностику", action: #selector(copyDiagnostics), keyEquivalent: "")
@@ -668,8 +642,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         refreshLoginState()
 
-        UserDefaults.standard.register(defaults: [Self.leftShiftKey: true])
-        applyLeftShiftSetting(UserDefaults.standard.bool(forKey: Self.leftShiftKey))
+        UserDefaults.standard.register(defaults: [Self.shiftTapKey: true])
+        applyShiftTapSetting(UserDefaults.standard.bool(forKey: Self.shiftTapKey))
 
         // Gatekeeper запускает скачанное приложение из случайной папки только для
         // чтения (App Translocation), пока его не перенесли в Finder. Путь меняется
@@ -783,15 +757,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
-    @objc private func toggleLeftShiftSwitch() {
-        let enabled = !Engine.shared.switchLayoutOnLeftShiftTap
-        UserDefaults.standard.set(enabled, forKey: Self.leftShiftKey)
-        applyLeftShiftSetting(enabled)
+    @objc private func toggleShiftTapSwitch() {
+        let enabled = !Engine.shared.switchLayoutOnShiftTap
+        UserDefaults.standard.set(enabled, forKey: Self.shiftTapKey)
+        applyShiftTapSetting(enabled)
     }
 
-    private func applyLeftShiftSetting(_ enabled: Bool) {
-        Engine.shared.switchLayoutOnLeftShiftTap = enabled
-        leftShiftItem.state = enabled ? .on : .off
+    private func applyShiftTapSetting(_ enabled: Bool) {
+        Engine.shared.switchLayoutOnShiftTap = enabled
+        shiftTapItem.state = enabled ? .on : .off
     }
 
     @objc private func toggleLogin() {
