@@ -12,3 +12,6 @@ debug.log
 *.xcuserstate
 xcuserdata/
 DerivedData/
+
+# Предпросмотр фона DMG — рисуется Tools/make_dmg_background.sh
+Assets/dmg/*-preview.png

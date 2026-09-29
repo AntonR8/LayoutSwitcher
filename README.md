@@ -157,6 +157,8 @@ The build doesn't fail without an app icon: no `.icon` means no `Assets.car`, no
 
 **The author's logo** in the menu is `Resources/Developer.png`.
 
+**The DMG window background** is `Assets/dmg/background.tiff` (1x and 2x in one file), drawn by `Tools/make_dmg_background.sh`. `build.sh` places the icons through Finder; their positions must match the slots on the background.
+
 ## How it works
 
 | File | What it does |

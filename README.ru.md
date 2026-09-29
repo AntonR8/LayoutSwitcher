@@ -155,6 +155,8 @@ NOTARIZE=1 SIGN_ID=<отпечаток Developer ID Application> ./build.sh
 
 **Логотип автора** в меню — `Resources/Developer.png`.
 
+**Фон окна DMG** — `Assets/dmg/background.tiff` (1x и 2x в одном файле), рисуется скриптом `Tools/make_dmg_background.sh`. Места значков в окне задаёт `build.sh` через Finder, они должны совпадать с гнёздами на фоне.
+
 ## Как устроено
 
 | Файл | Что делает |

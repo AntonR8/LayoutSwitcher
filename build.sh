@@ -207,9 +207,55 @@ if [ "$NOTARIZE" = "1" ]; then
     mkdir -p "$STAGE"
     ditto "$APP" "$STAGE/LayoutSwitcher.app"
     ln -s /Applications "$STAGE/Applications"
-    hdiutil create -quiet -volname "LayoutSwitcher $VERSION" -srcfolder "$STAGE" \
-        -fs HFS+ -format UDZO -imagekey zlib-level=9 "$DMG"
+    mkdir -p "$STAGE/.background"
+    cp "$DIR/Assets/dmg/background.tiff" "$STAGE/.background/background.tiff"
+
+    # Оформление окна: фон и места значков. Хранится в .DS_Store тома, а
+    # записать его умеет только Finder — поэтому образ сначала создаётся
+    # записываемым, Finder расставляет всё через AppleScript, и лишь потом
+    # образ сжимается. Координаты — центры значков, должны совпадать
+    # с гнёздами на фоне (Tools/DMGBackground/main.swift).
+    VOLNAME="LayoutSwitcher $VERSION"
+    RW="$BUILD/LayoutSwitcher-rw.dmg"
+    rm -f "$RW"
+    hdiutil detach -quiet "/Volumes/$VOLNAME" 2>/dev/null || true
+    hdiutil create -quiet -volname "$VOLNAME" -srcfolder "$STAGE" -fs HFS+ -format UDRW -ov "$RW"
     rm -rf "$STAGE"
+    MNT=$(hdiutil attach -readwrite -noverify -noautoopen "$RW" | awk -F'\t' '/\/Volumes\//{print $NF}')
+    [ -d "$MNT" ] || { echo "❌ не смонтировался $RW" >&2; exit 1; }
+    DMG_W=640; DMG_H=400; ICON_Y=215
+    if ! osascript <<APPLESCRIPT
+tell application "Finder"
+    tell disk "$VOLNAME"
+        open
+        set current view of container window to icon view
+        set toolbar visible of container window to false
+        set statusbar visible of container window to false
+        set the bounds of container window to {200, 120, 200 + $DMG_W, 120 + $DMG_H + 28}
+        set opts to the icon view options of container window
+        set arrangement of opts to not arranged
+        set icon size of opts to 112
+        set text size of opts to 13
+        set background picture of opts to file ".background:background.tiff"
+        set position of item "LayoutSwitcher.app" of container window to {160, $ICON_Y}
+        set position of item "Applications" of container window to {480, $ICON_Y}
+        update without registering applications
+        delay 1
+        close
+    end tell
+end tell
+APPLESCRIPT
+    then
+        echo "⚠️  Finder не оформил окно DMG (нет разрешения на управление Finder?) — образ будет без фона" >&2
+    fi
+    # Finder пишет .DS_Store не сразу — ждём, пока появится.
+    for _ in 1 2 3 4 5 6 7 8 9 10; do [ -f "$MNT/.DS_Store" ] && break; sleep 1; done
+    chmod -Rf go-w "$MNT" 2>/dev/null || true
+    rm -rf "$MNT/.fseventsd"
+    sync
+    hdiutil detach -quiet "$MNT" || { sleep 2; hdiutil detach -force -quiet "$MNT"; }
+    hdiutil convert -quiet "$RW" -format UDZO -imagekey zlib-level=9 -o "$DMG"
+    rm -f "$RW"
     codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
     notarize "$DMG"
     xcrun stapler staple "$DMG"
