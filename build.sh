@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
-APP="$DIR/build/LayoutSwitcher.app"
+# Собираем вне папки проекта: если она лежит в iCloud Drive, тот вешает на
+# бандл свои атрибуты (fileprovider, FinderInfo), и codesign отказывается его
+# подписывать. Переопределяется: BUILD=<папка> ./build.sh
+BUILD="${BUILD:-$HOME/Library/Caches/LayoutSwitcher/build}"
+APP="$BUILD/LayoutSwitcher.app"
 
 # Минимальная версия macOS. Должна совпадать с LSMinimumSystemVersion в Info.plist:
 # иначе Launch Services пустит приложение на старую систему, а dyld откажется его
@@ -10,9 +14,10 @@ APP="$DIR/build/LayoutSwitcher.app"
 DEPLOY="13.0"
 
 SRC=("$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" "$DIR/Sources/Chain.swift" \
-     "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
+     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
 
-rm -rf "$DIR/build"
+rm -rf "$BUILD"
+mkdir -p "$BUILD"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 # Universal binary: swiftc за один вызов делает только одну архитектуру,
@@ -21,14 +26,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 for ARCH in arm64 x86_64; do
     swiftc -O -swift-version 5 \
         -target "$ARCH-apple-macos$DEPLOY" \
-        -o "$DIR/build/LayoutSwitcher-$ARCH" \
+        -o "$BUILD/LayoutSwitcher-$ARCH" \
         "${SRC[@]}" \
         -framework Cocoa -framework Carbon -framework ServiceManagement
 done
 
 lipo -create -output "$APP/Contents/MacOS/LayoutSwitcher" \
-    "$DIR/build/LayoutSwitcher-arm64" "$DIR/build/LayoutSwitcher-x86_64"
-rm -f "$DIR/build/LayoutSwitcher-arm64" "$DIR/build/LayoutSwitcher-x86_64"
+    "$BUILD/LayoutSwitcher-arm64" "$BUILD/LayoutSwitcher-x86_64"
+rm -f "$BUILD/LayoutSwitcher-arm64" "$BUILD/LayoutSwitcher-x86_64"
 
 cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 
@@ -45,7 +50,7 @@ cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 ICON_DOC="$DIR/Assets/AppIcon.icon"
 if [ -d "$ICON_DOC" ] && xcrun --find actool >/dev/null 2>&1; then
     actool "$ICON_DOC" --compile "$APP/Contents/Resources" --app-icon AppIcon \
-        --output-partial-info-plist "$DIR/build/icon-partial.plist" \
+        --output-partial-info-plist "$BUILD/icon-partial.plist" \
         --platform macosx --minimum-deployment-target "$DEPLOY" >/dev/null 2>&1
     if [ -f "$APP/Contents/Resources/Assets.car" ]; then
         echo "значок: Assets.car (macOS 26)"
@@ -61,7 +66,7 @@ if [ -f "$ICON_SRC" ]; then
     SIZE=$(sips -g pixelWidth "$ICON_SRC" | awk '/pixelWidth/{print $2}')
     [ "$SIZE" -ge 1024 ] || echo "⚠️  Assets/icon.png шириной ${SIZE}px, нужно 1024 — значок будет мылить" >&2
 
-    ICONSET="$DIR/build/AppIcon.iconset"
+    ICONSET="$BUILD/AppIcon.iconset"
     mkdir -p "$ICONSET"
     for PAIR in "16 16x16" "32 16x16@2x" "32 32x32" "64 32x32@2x" "128 128x128" \
                 "256 128x128@2x" "256 256x256" "512 256x256@2x" "512 512x512" "1024 512x512@2x"; do
