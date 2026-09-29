@@ -105,7 +105,9 @@ sign_is_revoked() {
 }
 
 if [ -n "$SIGN_ID" ]; then
-    codesign --force --options runtime --sign "$SIGN_ID" "$APP"
+    # --timestamp: защищённая метка времени от Apple, без неё нотаризация
+    # сборку не примет. Нужна сеть.
+    codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$APP"
     if sign_is_revoked; then
         echo "❌ сертификат $SIGN_ID ОТОЗВАН Apple." >&2
         echo "   Сборка с ним будет опознана как вредонос и удалена в Корзину." >&2
@@ -130,3 +132,55 @@ fi
 
 echo "собрано: $APP"
 lipo -archs "$APP/Contents/MacOS/LayoutSwitcher" | sed 's/^/архитектуры: /'
+
+# Нотаризация: NOTARIZE=1 SIGN_ID=<отпечаток Developer ID Application> ./build.sh
+#
+# Сборку проверяет Apple, результат «пришивается» к приложению (staple), и
+# скачанный архив открывается двойным кликом — без «Apple не удалось проверить»
+# и без «Всё равно открыть» в настройках. Годится только подпись сертификатом
+# Developer ID Application; Apple Development и ad-hoc Apple отклонит.
+#
+# Ключ App Store Connect API берётся из ~/.appstoreconnect/config.json
+# (key_id, issuer_id, key_path) либо из ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH.
+# Готовый архив для релиза: dist/LayoutSwitcher.zip.
+if [ "$NOTARIZE" = "1" ]; then
+    if ! codesign -dvv "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
+        echo "❌ для нотаризации нужна подпись Developer ID Application (SIGN_ID)" >&2
+        exit 1
+    fi
+
+    CONFIG="$HOME/.appstoreconnect/config.json"
+    cfg() { python3 -c "import json,os,sys; print(os.path.expanduser(json.load(open(sys.argv[1]))[sys.argv[2]]))" "$CONFIG" "$1" 2>/dev/null; }
+    KEY_ID="${ASC_KEY_ID:-$(cfg key_id)}"
+    ISSUER="${ASC_ISSUER_ID:-$(cfg issuer_id)}"
+    KEY_PATH="${ASC_KEY_PATH:-$(cfg key_path)}"
+    [ -n "$KEY_PATH" ] || KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8"
+    if [ -z "$KEY_ID" ] || [ -z "$ISSUER" ] || [ ! -f "$KEY_PATH" ]; then
+        echo "❌ нет ключа App Store Connect API — см. комментарий у NOTARIZE в build.sh" >&2
+        exit 1
+    fi
+
+    ZIP="$BUILD/LayoutSwitcher.zip"
+    rm -f "$ZIP"
+    ditto -c -k --keepParent "$APP" "$ZIP"
+    echo "отправляю на нотаризацию (обычно 1–5 минут)…"
+    xcrun notarytool submit "$ZIP" --key "$KEY_PATH" --key-id "$KEY_ID" --issuer "$ISSUER" \
+        --wait --output-format json > "$BUILD/notary.json" || true
+    STATUS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('status',''))" "$BUILD/notary.json" 2>/dev/null)
+    if [ "$STATUS" != "Accepted" ]; then
+        echo "❌ нотаризация не прошла: ${STATUS:-нет ответа}" >&2
+        cat "$BUILD/notary.json" >&2
+        ID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('id',''))" "$BUILD/notary.json" 2>/dev/null)
+        [ -n "$ID" ] && echo "подробности: xcrun notarytool log $ID --key … --key-id $KEY_ID --issuer $ISSUER" >&2
+        exit 1
+    fi
+
+    xcrun stapler staple "$APP"
+    # Архив заново — уже с пришитым билетом, чтобы проверка шла и без сети.
+    rm -f "$ZIP"
+    ditto -c -k --keepParent "$APP" "$ZIP"
+    mkdir -p "$DIR/dist"
+    cp "$ZIP" "$DIR/dist/LayoutSwitcher.zip"
+    spctl -a -t exec -vv "$APP" 2>&1 | sed 's/^/gatekeeper: /'
+    echo "нотаризовано: $DIR/dist/LayoutSwitcher.zip"
+fi
