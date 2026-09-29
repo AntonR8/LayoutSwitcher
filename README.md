@@ -1,141 +1,198 @@
+**English** | [Русский](README.ru.md)
+
 # LayoutSwitcher
 
-Бесплатный переключатель раскладки для macOS. Открытый код, ~370 строк Swift, без зависимостей.
+A free keyboard-layout fixer for macOS. Open source, Swift, no dependencies.
 
-Перебивает текст, набранный не в той раскладке. Набрал `ghjdthrf` — двойной Shift, получилось `проверка`.
+It retypes text you entered in the wrong layout. Typed `ghjdthrf` instead of `проверка`? Double-tap Shift and it's fixed.
 
-Нажми Shift ещё раз, и охват расширится: слово → предложение → с последней смены раскладки → вся строка. Пауза в 2 секунды сбрасывает цепочку. Если охват уже перебит, повторный двойной Shift вернёт как было.
+Double-tap Shift again and the scope grows: word → sentence → since the last layout change → whole line. A 2-second pause resets the chain. If the scope has already been converted, another double Shift puts it back.
 
-Короткое нажатие Shift — левого или правого — само по себе переключает раскладку: русский ↔ английский, мгновенно и без Cmd+Space. Shift с буквой или долгое удержание раскладку не трогают. Выключается в меню значка.
+A single short tap on either Shift just switches the input layout — instantly, without Cmd+Space. Shift used with a letter, or held down, doesn't switch anything. You can turn this off in the menu.
 
-Живёт в строке меню, иконки в Dock нет.
+Lives in the menu bar, no Dock icon.
 
-Интерфейс на 13 языках: английский, русский, испанский, французский, португальский, немецкий, турецкий, арабский, китайский (упрощённый), итальянский, японский, украинский и хинди. Язык выбирается по настройкам системы; если его нет в списке — английский.
+<img src="Assets/screenshots/menu-en.png" width="560" alt="LayoutSwitcher menu">
 
----
+The interface is available in 13 languages: English, Russian, Spanish, French, Portuguese, German, Turkish, Arabic, Chinese (Simplified), Italian, Japanese, Ukrainian and Hindi. It follows your system language and falls back to English.
 
-## 📥 [Скачать LayoutSwitcher.zip](https://github.com/AntonR8/LayoutSwitcher/releases/latest/download/LayoutSwitcher.zip)
-
-Нужна macOS 13 или новее. Работает и на Apple Silicon, и на Intel.
+> Converting isn't limited to Russian: it works with a Latin layout paired with any non-Latin one, because the character map is built from the layouts themselves.
 
 ---
 
-## Установка
+## 📥 [Download LayoutSwitcher.dmg](https://github.com/AntonR8/LayoutSwitcher/releases/latest/download/LayoutSwitcher.dmg)
 
-**1.** Распакуй архив и перетащи `LayoutSwitcher.app` в папку «Программы».
+Requires macOS 13 or later. Runs natively on Apple Silicon and Intel. Signed and notarized by Apple.
 
-**2.** Открой приложение. Сборка нотаризована Apple, поэтому macOS только спросит, точно ли открыть программу из интернета, — жми «Открыть».
-
-**3.** Появится запрос доступа к клавиатуре. Дальше: **Системные настройки → Конфиденциальность и безопасность → Универсальный доступ** → добавь `LayoutSwitcher` и включи переключатель. Перезапускать не нужно, программа подхватит разрешение сама (значок в панели сменится с треугольника на обычный).
-
-**4.** В меню значка включи «Запускать при входе», если нужно.
-
-Если запускать программу с таким доступом не хочется без проверки — [собери её сам из исходников](#сборка-из-исходников), это пара команд.
+The same release as an archive: [LayoutSwitcher.zip](https://github.com/AntonR8/LayoutSwitcher/releases/latest/download/LayoutSwitcher.zip). SHA-256 checksums are listed in every [release](https://github.com/AntonR8/LayoutSwitcher/releases).
 
 ---
 
-## Почему требуется доступ к клавиатуре
+## Install
 
-Программе нужно два разрешения, и оба даёт один переключатель «Универсальный доступ».
+**1.** Open `LayoutSwitcher.dmg` and drag `LayoutSwitcher` onto the Applications shortcut in the same window.
 
-Первое — знать, что нажат двойной Shift: она ставит перехватчик событий (`CGEventTap` в режиме «только слушать»).
+**2.** Launch LayoutSwitcher from Applications. macOS will ask whether you want to open an app downloaded from the internet — click Open.
 
-Второе — прочитать и переписать поле ввода. Программа не эмулирует забои вслепую, а берёт реальное содержимое поля через Accessibility. Иначе ломается везде, где текст в поле не совпадает с набранным: Spotlight с прошлым запросом, адресная строка с автодополнением, вставка из буфера обмена.
+> Launch it from Applications, not straight from the disk image or Downloads. From there macOS runs a temporary copy, and the keyboard permission is lost on every launch.
 
-**Это тот же уровень доступа, что у кейлоггера.** Так что честно:
+**3.** macOS will ask for keyboard access. Go to **System Settings → Privacy & Security → Accessibility**, add `LayoutSwitcher` and turn it on. No restart needed — the app picks up the permission by itself, and the red “No keyboard access” row disappears from the menu.
 
-- Программа **никуда ничего не отправляет** — сетевого кода в ней нет вообще.
-- **Ничего не пишет на диск.** Запасной буфер живёт только в памяти и сбрасывается на Enter, Tab, стрелках, клике мышью и сочетаниях с Cmd/Ctrl/Option.
-- Поле читается только в момент нажатия двойного Shift, а не постоянно.
+**4.** Turn on “Open at login” in the menu if you like.
 
-Проверить всё это можно по исходникам, их тут ~600 строк. `Sources/main.swift` — весь код целиком.
+If you'd rather not grant this kind of access to a binary you haven't checked — [build it yourself](#build-from-source), it's two commands.
 
-Если не доверяешь готовому бинарнику — собери сам, см. ниже. Это правильная реакция на программу, которая просит такой доступ.
+## Updating
+
+The app never updates itself or checks for new versions: it has no networking code, on purpose. New versions appear on the [Releases](https://github.com/AntonR8/LayoutSwitcher/releases) page — use Watch → Custom → Releases to get notified.
+
+To update: quit LayoutSwitcher (⌘Q in its menu), download the new version and replace the app in Applications. Your settings are kept.
+
+> **Updating from 1.13 or earlier?** You'll need to grant keyboard access again: since 1.14 the app has a different signature, and macOS ties the permission to the signature. In **Accessibility**, remove the old LayoutSwitcher entry with “−” and add the app again.
+
+## Uninstall
+
+1. Quit LayoutSwitcher (⌘Q in its menu).
+2. If “Open at login” was on, turn it off in the menu first, or remove LayoutSwitcher in **System Settings → General → Login Items**.
+3. Delete `LayoutSwitcher.app` from Applications.
+4. In **Accessibility**, remove the LayoutSwitcher entry with “−”.
+5. Settings (a single on/off value for single Shift): `defaults delete local.anton.layoutswitcher`.
+
+## Troubleshooting
+
+1. Open the menu. A red “No keyboard access” row means the permission isn't granted: click it and follow the instructions.
+2. If there's no red row but converting doesn't work, click **Copy** in the “Copy diagnostics” row and attach the report to a [bug report](https://github.com/AntonR8/LayoutSwitcher/issues/new?template=bug_report.md). It shows where things stop: access, keyboard tap, layouts, reading the text field. What you typed is never included.
+3. You can also get the report from Terminal: `/Applications/LayoutSwitcher.app/Contents/MacOS/LayoutSwitcher --diagnostics`. But there the access lines reflect Terminal's permissions, not the app's, so the report from the menu is more reliable.
 
 ---
 
-## Сборка из исходников
+## Why it needs keyboard access
 
-Нужен Xcode или Command Line Tools (`xcode-select --install`).
+The app needs two things, and a single Accessibility switch grants both.
+
+First, to notice Shift presses: it installs an event tap (`CGEventTap`, listen-only).
+
+Second, to read and rewrite the text field. Instead of blindly sending backspaces, it reads the field's actual contents through Accessibility. Otherwise it would break wherever the field doesn't match what was typed: Spotlight with a previous query, an address bar with autocomplete, pasted text.
+
+**This is the same level of access a keylogger has.** So, honestly:
+
+- The app **sends nothing anywhere** — there is no networking code at all. The “?” and “About me” buttons just open a web page in your browser.
+- **What you type is never stored.** The fallback buffer lives in memory only and is cleared on Enter, Tab, arrows, mouse clicks and Cmd/Ctrl/Option shortcuts. The only thing on disk is one setting — single Shift on/off — in `~/Library/Preferences/local.anton.layoutswitcher.plist`.
+- The text field is read only at the moment of a double Shift, never continuously.
+
+You can verify all of this in the source — about 1,700 lines in eight files, see [How it works](#how-it-works).
+
+If you don't trust the prebuilt binary, build it yourself (see below). That's the right reaction to an app asking for this kind of access.
+
+---
+
+## Build from source
+
+Requires Xcode or the Command Line Tools (`xcode-select --install`).
 
 ```
-./build.sh          # собрать в ~/Library/Caches/LayoutSwitcher/build/LayoutSwitcher.app
-./test.sh           # прогнать тесты логики границ и нажатий Shift
+./build.sh          # builds ~/Library/Caches/LayoutSwitcher/build/LayoutSwitcher.app
+./test.sh           # tests: scope boundaries, Shift taps, translation completeness
 ```
 
-Сборка идёт вне папки проекта: если та лежит в iCloud Drive, он вешает на бандл свои атрибуты, и `codesign` отказывается подписывать. Другую папку можно задать так: `BUILD=<папка> ./build.sh`.
+The build goes outside the project folder: if the project lives in iCloud Drive, iCloud adds extended attributes to the bundle and `codesign` refuses to sign it. Override with `BUILD=<folder> ./build.sh`.
 
-`build.sh` собирает universal binary (arm64 + x86_64) с минимальной версией macOS 13.0 — той же, что указана в `Info.plist`.
+`build.sh` produces a universal binary (arm64 + x86_64) with a minimum of macOS 13.0, matching `Info.plist`.
 
-По умолчанию подпись ad-hoc. Работать будет, но доступ к Универсальному доступу придётся выдавать заново после каждой пересборки: он привязан к подписи, а у ad-hoc она меняется вместе с бинарём.
+By default the build is signed ad-hoc. It works, but you'll have to grant Accessibility again after every rebuild: the permission is tied to the signature, and an ad-hoc signature changes with the binary.
 
-Свой сертификат задаётся через переменную окружения — с ним подпись стабильна и выданный доступ переживает пересборку:
-
-```
-SIGN_ID=<отпечаток сертификата> ./build.sh
-```
-
-Нотаризация — для сборки, которую выкладываешь другим. Нужны сертификат **Developer ID Application** и ключ App Store Connect API (берётся из `~/.appstoreconnect/config.json`, подробности в комментарии в `build.sh`):
+Sign with your own certificate to keep the permission across rebuilds:
 
 ```
-NOTARIZE=1 SIGN_ID=<отпечаток Developer ID Application> ./build.sh
+SIGN_ID=<certificate fingerprint> ./build.sh
 ```
 
-Сборка уходит в Apple на проверку, результат пришивается к приложению (`stapler`), готовый архив ложится в `dist/LayoutSwitcher.zip`.
+Notarization is for builds you give to other people. It needs a **Developer ID Application** certificate and an App Store Connect API key (read from `~/.appstoreconnect/config.json`, see the comment in `build.sh`):
 
-> ⚠️ **Не подписывай отозванным сертификатом.** Это хуже, чем не подписывать вовсе: macOS считает такую сборку вредоносом, показывает «Malware Blocked and Moved to Trash» и переносит приложение в Корзину. Пользователь не может это обойти никак — в отличие от ad-hoc, где достаточно подтвердить запуск.
+```
+NOTARIZE=1 SIGN_ID=<Developer ID Application fingerprint> ./build.sh
+```
+
+The app and the disk image are sent to Apple, the tickets are stapled, and `LayoutSwitcher.dmg` and `LayoutSwitcher.zip` land in `dist/`.
+
+A whole release in one command — bumps the version, runs the tests, builds and notarizes, commits, creates the GitHub release with SHA-256 checksums, and checks that the download links serve exactly these files:
+
+```
+./release.sh 1.16 notes.md
+```
+
+> ⚠️ **Never sign with a revoked certificate.** It's worse than not signing: macOS treats the build as malware, shows “Malware Blocked and Moved to Trash” and moves the app to the Trash, and the user can't override it — unlike ad-hoc, where confirming the launch is enough.
 >
-> `security find-identity` тут не помощник: он показывает закешированный статус и спокойно называет валидным сертификат, отозванный Apple. Поэтому `build.sh` проверяет подпись через Gatekeeper уже после подписания и сам откатывается на ad-hoc, если сертификат отозван.
+> `security find-identity` won't warn you: it shows a cached status and happily reports a certificate Apple has revoked as valid. That's why `build.sh` asks Gatekeeper after signing and falls back to ad-hoc if the certificate is revoked.
 
-## Значки
+### Checking the menu without running the app
 
-Их два, и они независимы.
+```
+./Tests/render_menu.sh                 # the menu in every language → build/menu/<lang>.png
+./Tests/render_menu.sh out --a11y      # plus what VoiceOver will read
+```
 
-**В строке меню** — константа `symbolName` в `Sources/main.swift`, любое имя из SF Symbols. Рисуется как template image: macOS сама перекрашивает его под светлую и тёмную тему, поэтому цвет задавать не нужно.
+Use it to check the layout after changing translations and to make the README screenshots (`Assets/screenshots`).
 
-**Значок приложения** лежит в двух видах, и оба нужны:
+## Icons
 
-| Файл | Во что превращается | Кто его видит |
+There are three.
+
+**Menu bar icon** — a Shift key. Sources: `Assets/StatusIcon.svg` and `Assets/StatusIconOn.svg` (green arrow: single Shift switches layouts). It's a colour image, not a template: the grey key reads well on both light and dark menu bars. The PNGs (`StatusIcon*.png`, 18 pt at 1x/2x/3x) are pre-rendered from the SVGs because `NSImage` can't read SVG on macOS 13. Edit the SVG — re-render the PNGs.
+
+**App icon** comes in two forms, and both are needed:
+
+| File | Becomes | Who sees it |
 |---|---|---|
-| `Assets/AppIcon.icon` | `Assets.car` через `actool` | macOS 26 — «живой» значок со всеми эффектами |
-| `Assets/icon.png` | `AppIcon.icns` через `sips` + `iconutil` | macOS 13…15, где `.icon` не поддерживается |
+| `Assets/AppIcon.icon` | `Assets.car` via `actool` | macOS 26 — the “live” icon with all effects |
+| `Assets/icon.png` | `AppIcon.icns` via `sips` + `iconutil` | macOS 13–15, which don't support `.icon` |
 
-`Assets/AppIcon.icon` — исходник, документ [Icon Composer](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer). Правится только он.
+`Assets/AppIcon.icon` is the source, an [Icon Composer](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer) document. Edit only that.
 
-`Assets/icon.png` — плоская отрисовка того же значка в 1024×1024. Нужна потому, что `.icns`, который `actool` кладёт рядом с `Assets.car`, обрезан по 256×256 и в Finder на крупных размерах мылит. Полноразмерный `.icns` собирается из PNG и перекрывает обрезанный.
+`Assets/icon.png` is a flat 1024×1024 rendering of the same icon. It's needed because the `.icns` that `actool` writes next to `Assets.car` is capped at 256×256 and looks blurry in Finder at large sizes. A full-size `.icns` is built from the PNG and replaces it.
 
-Если правишь `.icon` — перегенерируй и PNG, иначе на старых macOS останется прежний значок. Отрисовать можно системой: собрать приложение, зарегистрировать его в Launch Services (`lsregister -f`) и забрать у `NSWorkspace.shared.icon(forFile:)` представление 1024×1024. Так композицию делает сам macOS, а не воспроизводит её вручную.
+If you edit the `.icon`, regenerate the PNG too, or older macOS versions will keep the old icon. Let the system render it: build the app, register it with Launch Services (`lsregister -f`) and take the 1024×1024 representation from `NSWorkspace.shared.icon(forFile:)`.
 
-Сборка без значков не падает: нет `.icon` — не будет `Assets.car`, нет PNG — не будет `.icns`, оба случая только предупреждение.
+The build doesn't fail without an app icon: no `.icon` means no `Assets.car`, no PNG means no `.icns`; both are just warnings.
 
-Про читаемость: на 16 пунктах значок превращается в пятно, различима только форма и цвет. На Retina этот размер берёт ассет 32×32, где клавиатура уже читается, поэтому на практике всё в порядке — но детализировать сильнее смысла нет.
+**The author's logo** in the menu is `Resources/Developer.png`.
 
-## Как устроено
+## How it works
 
-| Файл | Что делает |
+| File | What it does |
 |---|---|
-| `Sources/Mapping.swift` | таблица «символ → символ», строится перебором клавиш через `UCKeyTranslate` |
-| `Sources/Extent.swift` | границы охвата: слово, предложение, смена алфавита, строка |
-| `Sources/ShiftTap.swift` | распознавание одиночного и двойного нажатия Shift |
-| `Sources/RetroMenu.swift` | панель значка в строке меню (SwiftUI): переключатели, диагностика, выход |
-| `Sources/Localization.swift`, `Resources/*.lproj` | переводы интерфейса на 13 языков; `Tests/check_localization.py` проверяет, что все языки полные |
-| `Sources/AXText.swift` | чтение и запись поля в фокусе через Accessibility |
-| `Sources/main.swift` | перехват клавиатуры, смена раскладки, склейка всего вместе |
+| `Sources/Mapping.swift` | the character map, built by enumerating keys with `UCKeyTranslate` |
+| `Sources/Extent.swift` | scope boundaries: word, sentence, script change, line |
+| `Sources/Chain.swift` | what a repeated double Shift does: expand, undo or start over |
+| `Sources/ShiftTap.swift` | recognising single and double Shift taps |
+| `Sources/RetroMenu.swift` | the menu bar panel (SwiftUI): toggles, diagnostics, author, quit |
+| `Sources/Localization.swift`, `Resources/*.lproj` | UI translations in 13 languages; `Tests/check_localization.py` checks they're complete |
+| `Sources/AXText.swift` | reading and writing the focused field through Accessibility |
+| `Sources/main.swift` | keyboard tap, layout switching, gluing it all together |
 
-Таблица соответствий строится из данных самих раскладок, а не задана в коде. Поэтому пунктуация, цифры и нестандартные раскладки работают сами собой.
-
----
-
-## Известные ограничения
-
-- Нет автоматического режима: программа не угадывает ошибку сама, перебивает только по двойному Shift.
-- Первое нажатие двойного Shift успевает переключить раскладку, второе возвращает её обратно и перебивает текст. Поэтому при двойном Shift раскладка на долю секунды меняется туда и обратно — это видно по значку в строке меню.
-- Работает с двумя раскладками — латинской и нелатинской. Если включено три и больше, парную выбирает первую подходящую.
-- Не трогает выделенный текст, только то, что стоит перед кареткой.
-- В программах, которые не отдают поле через Accessibility (некоторые терминалы, игры), работает запасной путь — стирание забоями. Там возможны ошибки в полях с автодополнением.
+The character map comes from the layouts' own data rather than being hard-coded, so punctuation, digits and non-standard layouts just work.
 
 ---
 
-## Лицензия
+## Known limitations
 
-MIT — делай что хочешь, но без гарантий. См. [LICENSE](LICENSE).
+- No automatic mode: the app doesn't guess mistakes, it converts only on a double Shift.
+- The first tap of a double Shift already switches the layout; the second switches it back and converts the text. So during a double Shift the layout flips back and forth for a split second — you can see it in the system input indicator.
+- Works with two layouts — one Latin and one non-Latin. With three or more enabled, it pairs the first suitable ones.
+- Doesn't touch selected text, only what's before the caret.
+- In apps that don't expose the text field through Accessibility (some terminals, games) a fallback retypes with backspaces. It can misbehave in fields with autocomplete.
+- Translations other than English, Russian and Ukrainian weren't reviewed by native speakers. Spotted a mistake? [Let me know](https://github.com/AntonR8/LayoutSwitcher/issues).
+
+---
+
+## Author
+
+<img src="Resources/Developer.png" width="64" align="left" alt="">
+
+**Anton Razguliaev** — iOS developer. LayoutSwitcher is free; if you find it useful, have a look at [antonr8.github.io](https://antonr8.github.io) for my other apps and contacts.
+
+<br clear="left">
+
+## License
+
+MIT — do what you like, no warranty. See [LICENSE](LICENSE).
