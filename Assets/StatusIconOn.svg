@@ -50,17 +50,8 @@
   <path d="M116 355 Q120 378 143 384 L369 384 Q391 378 396 355" fill="none" stroke="#a5a6a5" stroke-width="4" opacity=".45"/>
 
   <!-- shift arrow -->
-  <path d="M256 137 L192 203 L218 203 L218 263 L294 263 L294 203 L320 203 Z"
-        fill="#34c759" stroke="#1e8e3e" stroke-width="13" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
-  <path d="M256 151 L208 201 L228 201 L228 252 L284 252 L284 201 L304 201 Z"
-        fill="none" stroke="#a8f0b5" stroke-width="3" stroke-linejoin="round"/>
-
-  <!-- label -->
-  <text x="256" y="323"
-        text-anchor="middle"
-        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
-        font-size="48"
-        font-weight="400"
-        letter-spacing="-1"
-        fill="#55585a">shift</text>
+  <path d="M256 112 L146 230 L200 230 L200 352 L312 352 L312 230 L366 230 Z"
+        fill="#34c759" stroke="#1e8e3e" stroke-width="22" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M256 136 L176 222 L214 222 L214 338 L298 338 L298 222 L336 222 Z"
+        fill="none" stroke="#a8f0b5" stroke-width="5" stroke-linejoin="round"/>
 </svg>
