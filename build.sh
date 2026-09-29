@@ -46,6 +46,9 @@ cp "$DIR"/Assets/StatusIcon*.png "$APP/Contents/Resources/"
 # Список языков — CFBundleLocalizations в Info.plist, должен совпадать с папками.
 cp -R "$DIR"/Resources/*.lproj "$APP/Contents/Resources/"
 
+# Логотип автора для визитки в меню.
+cp "$DIR/Resources/Developer.png" "$APP/Contents/Resources/"
+
 # Значок приложения собирается в двух видах, потому что одного не хватает.
 #
 # Assets/AppIcon.icon — документ Icon Composer. actool превращает его в
@@ -146,7 +149,7 @@ lipo -archs "$APP/Contents/MacOS/LayoutSwitcher" | sed 's/^/архитектур
 #
 # Ключ App Store Connect API берётся из ~/.appstoreconnect/config.json
 # (key_id, issuer_id, key_path) либо из ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH.
-# Готовый архив для релиза: dist/LayoutSwitcher.zip.
+# Готовое для релиза: dist/LayoutSwitcher.dmg (основное) и dist/LayoutSwitcher.zip.
 if [ "$NOTARIZE" = "1" ]; then
     if ! codesign -dvv "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
         echo "❌ для нотаризации нужна подпись Developer ID Application (SIGN_ID)" >&2
@@ -164,27 +167,57 @@ if [ "$NOTARIZE" = "1" ]; then
         exit 1
     fi
 
+    # Отправить файл Apple и дождаться ответа. Падает, если не приняли.
+    notarize() {
+        local file="$1" log="$BUILD/notary-$(basename "$1").json"
+        echo "отправляю на нотаризацию $(basename "$file") (обычно 1–5 минут)…"
+        xcrun notarytool submit "$file" --key "$KEY_PATH" --key-id "$KEY_ID" --issuer "$ISSUER" \
+            --wait --output-format json > "$log" || true
+        local status id
+        status=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('status',''))" "$log" 2>/dev/null)
+        if [ "$status" != "Accepted" ]; then
+            echo "❌ нотаризация $(basename "$file") не прошла: ${status:-нет ответа}" >&2
+            cat "$log" >&2
+            id=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('id',''))" "$log" 2>/dev/null)
+            [ -n "$id" ] && echo "подробности: xcrun notarytool log $id --key … --key-id $KEY_ID --issuer $ISSUER" >&2
+            exit 1
+        fi
+    }
+
+    # 1. Само приложение: отправляем в zip, билет пришиваем к .app.
     ZIP="$BUILD/LayoutSwitcher.zip"
     rm -f "$ZIP"
     ditto -c -k --keepParent "$APP" "$ZIP"
-    echo "отправляю на нотаризацию (обычно 1–5 минут)…"
-    xcrun notarytool submit "$ZIP" --key "$KEY_PATH" --key-id "$KEY_ID" --issuer "$ISSUER" \
-        --wait --output-format json > "$BUILD/notary.json" || true
-    STATUS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('status',''))" "$BUILD/notary.json" 2>/dev/null)
-    if [ "$STATUS" != "Accepted" ]; then
-        echo "❌ нотаризация не прошла: ${STATUS:-нет ответа}" >&2
-        cat "$BUILD/notary.json" >&2
-        ID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('id',''))" "$BUILD/notary.json" 2>/dev/null)
-        [ -n "$ID" ] && echo "подробности: xcrun notarytool log $ID --key … --key-id $KEY_ID --issuer $ISSUER" >&2
-        exit 1
-    fi
-
+    notarize "$ZIP"
     xcrun stapler staple "$APP"
-    # Архив заново — уже с пришитым билетом, чтобы проверка шла и без сети.
+
+    # 2. Zip для релиза — заново, уже с пришитым билетом, чтобы проверка шла и без сети.
+    #    Остаётся ради старой ссылки releases/latest/download/LayoutSwitcher.zip.
     rm -f "$ZIP"
     ditto -c -k --keepParent "$APP" "$ZIP"
+
+    # 3. DMG — основной способ установки: в окне приложение и ярлык «Программы»,
+    #    перетащил — готово. Из zip приложение часто запускают прямо из «Загрузок»,
+    #    а там macOS запускает временную копию (App Translocation), и доступ к
+    #    клавиатуре слетает. Образ тоже подписываем, нотаризуем и пришиваем билет.
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
+    DMG="$BUILD/LayoutSwitcher.dmg"
+    STAGE="$BUILD/dmg"
+    rm -rf "$STAGE" "$DMG"
+    mkdir -p "$STAGE"
+    ditto "$APP" "$STAGE/LayoutSwitcher.app"
+    ln -s /Applications "$STAGE/Applications"
+    hdiutil create -quiet -volname "LayoutSwitcher $VERSION" -srcfolder "$STAGE" \
+        -fs HFS+ -format UDZO -imagekey zlib-level=9 "$DMG"
+    rm -rf "$STAGE"
+    codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
+    notarize "$DMG"
+    xcrun stapler staple "$DMG"
+
     mkdir -p "$DIR/dist"
     cp "$ZIP" "$DIR/dist/LayoutSwitcher.zip"
-    spctl -a -t exec -vv "$APP" 2>&1 | sed 's/^/gatekeeper: /'
-    echo "нотаризовано: $DIR/dist/LayoutSwitcher.zip"
+    cp "$DMG" "$DIR/dist/LayoutSwitcher.dmg"
+    spctl -a -t exec -vv "$APP" 2>&1 | sed 's/^/gatekeeper app: /'
+    spctl -a -t open --context context:primary-signature -vv "$DMG" 2>&1 | sed 's/^/gatekeeper dmg: /'
+    echo "нотаризовано: $DIR/dist/LayoutSwitcher.dmg и LayoutSwitcher.zip"
 fi
