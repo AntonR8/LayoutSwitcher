@@ -1,0 +1,27 @@
+/* LayoutSwitcher — zh-Hans */
+
+"menu.convert.title" = "转换最后一个词";
+"menu.convert.subtitle" = "按两下 Shift：转换单词。再按两下：扩大范围。";
+"menu.help" = "使用说明";
+"menu.access.title" = "没有键盘访问权限";
+"menu.access.subtitle" = "点按以了解如何授予权限。";
+"menu.shiftTap.title" = "单按 Shift 切换键盘布局";
+"menu.shiftTap.subtitle" = "按一下 Shift 即可切换输入语言。";
+"menu.diagnostics.title" = "拷贝诊断信息";
+"menu.diagnostics.subtitle" = "将技术支持所需的信息拷贝到剪贴板。";
+"menu.diagnostics.copy" = "拷贝";
+"menu.diagnostics.copied" = "已拷贝";
+"menu.login.title" = "登录时打开";
+"menu.login.subtitle" = "登录系统时自动启动应用。";
+"menu.quit" = "退出";
+"toggle.on" = "开";
+"toggle.off" = "关";
+"toggle.a11y.on" = "已开启";
+"toggle.a11y.off" = "已关闭";
+"alert.translocated.title" = "请将 LayoutSwitcher 移到“应用程序”文件夹";
+"alert.translocated.body" = "应用当前正从临时文件夹运行：对于下载的应用，在移动之前 macOS 都会这样处理。\n\n在此模式下，每次启动都会丢失键盘访问权限，“登录时打开”也无法生效。\n\n请在访达中将 LayoutSwitcher.app 拖到“应用程序”文件夹，然后从那里打开。";
+"alert.translocated.ok" = "好";
+"alert.access.title" = "需要键盘访问权限";
+"alert.access.body" = "打开“系统设置”→“隐私与安全性”→“辅助功能”，然后开启 LayoutSwitcher。无需重新启动应用，它会自动获取权限。";
+"alert.access.open" = "打开设置";
+"alert.access.later" = "稍后";

@@ -14,7 +14,7 @@ APP="$BUILD/LayoutSwitcher.app"
 DEPLOY="13.0"
 
 SRC=("$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" "$DIR/Sources/Chain.swift" \
-     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/RetroMenu.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
+     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/RetroMenu.swift" "$DIR/Sources/Localization.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
 
 rm -rf "$BUILD"
 mkdir -p "$BUILD"
@@ -41,6 +41,10 @@ cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
 # (зелёная стрелка: одиночный Shift меняет раскладку). PNG отрисованы из них
 # заранее: NSImage на macOS 13 SVG не читает.
 cp "$DIR"/Assets/StatusIcon*.png "$APP/Contents/Resources/"
+
+# Переводы интерфейса: Resources/<язык>.lproj/Localizable.strings.
+# Список языков — CFBundleLocalizations в Info.plist, должен совпадать с папками.
+cp -R "$DIR"/Resources/*.lproj "$APP/Contents/Resources/"
 
 # Значок приложения собирается в двух видах, потому что одного не хватает.
 #

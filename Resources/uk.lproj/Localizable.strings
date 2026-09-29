@@ -1,0 +1,27 @@
+/* LayoutSwitcher — uk */
+
+"menu.convert.title" = "Виправити останнє слово";
+"menu.convert.subtitle" = "Подвійний Shift — слово. Ще раз — ширше.";
+"menu.help" = "Як користуватися";
+"menu.access.title" = "Немає доступу до клавіатури";
+"menu.access.subtitle" = "Натисніть, щоб дізнатися, як його надати.";
+"menu.shiftTap.title" = "Перемикати розкладку одним Shift";
+"menu.shiftTap.subtitle" = "Швидко змінювати мову одним натисканням Shift.";
+"menu.diagnostics.title" = "Скопіювати діагностику";
+"menu.diagnostics.subtitle" = "Скопіювати в буфер інформацію для підтримки.";
+"menu.diagnostics.copy" = "Скопіювати";
+"menu.diagnostics.copied" = "Скопійовано";
+"menu.login.title" = "Запускати під час входу";
+"menu.login.subtitle" = "Автоматично запускати програму під час входу в систему.";
+"menu.quit" = "Вийти";
+"toggle.on" = "УВІМК";
+"toggle.off" = "ВИМК";
+"toggle.a11y.on" = "Увімкнено";
+"toggle.a11y.off" = "Вимкнено";
+"alert.translocated.title" = "Перенесіть LayoutSwitcher у «Програми»";
+"alert.translocated.body" = "Зараз програма запущена з тимчасової папки: macOS так робить із завантаженими програмами, доки їх не перенесли.\n\nУ цьому режимі наданий доступ до клавіатури зникає під час кожного запуску, а автозапуск не працює.\n\nПеретягніть LayoutSwitcher.app у «Програми» у Finder і запустіть звідти.";
+"alert.translocated.ok" = "Зрозуміло";
+"alert.access.title" = "Потрібен доступ до клавіатури";
+"alert.access.body" = "Відкрийте Системні параметри → Приватність і безпека → Доступність і ввімкніть LayoutSwitcher. Перезапускати програму не потрібно — вона підхопить дозвіл сама.";
+"alert.access.open" = "Відкрити параметри";
+"alert.access.later" = "Пізніше";

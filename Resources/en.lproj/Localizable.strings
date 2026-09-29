@@ -1,0 +1,27 @@
+/* LayoutSwitcher — en */
+
+"menu.convert.title" = "Convert last word";
+"menu.convert.subtitle" = "Double Shift — word. Again — wider.";
+"menu.help" = "How to use";
+"menu.access.title" = "No keyboard access";
+"menu.access.subtitle" = "Click to see how to grant it.";
+"menu.shiftTap.title" = "Switch layout with a single Shift";
+"menu.shiftTap.subtitle" = "Change the input language with one press of Shift.";
+"menu.diagnostics.title" = "Copy diagnostics";
+"menu.diagnostics.subtitle" = "Copy support information to the clipboard.";
+"menu.diagnostics.copy" = "Copy";
+"menu.diagnostics.copied" = "Copied";
+"menu.login.title" = "Open at login";
+"menu.login.subtitle" = "Start the app automatically when you log in.";
+"menu.quit" = "Quit";
+"toggle.on" = "ON";
+"toggle.off" = "OFF";
+"toggle.a11y.on" = "On";
+"toggle.a11y.off" = "Off";
+"alert.translocated.title" = "Move LayoutSwitcher to Applications";
+"alert.translocated.body" = "The app is running from a temporary folder: macOS does this with downloaded apps until they are moved.\n\nIn this mode, keyboard access is lost on every launch and Open at Login does not work.\n\nDrag LayoutSwitcher.app to the Applications folder in Finder and open it from there.";
+"alert.translocated.ok" = "OK";
+"alert.access.title" = "Keyboard access required";
+"alert.access.body" = "Open System Settings → Privacy & Security → Accessibility and turn on LayoutSwitcher. No need to restart the app — it picks up the permission automatically.";
+"alert.access.open" = "Open Settings";
+"alert.access.later" = "Later";

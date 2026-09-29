@@ -655,18 +655,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Self.isTranslocated() {
             FileHandle.standardError.write(Data("LayoutSwitcher: запущен из временной копии (App Translocation), путь \(Bundle.main.bundlePath)\n".utf8))
             let alert = NSAlert()
-            alert.messageText = "Перенесите LayoutSwitcher в «Программы»"
-            alert.informativeText = """
-                Сейчас программа запущена из временной папки: macOS так поступает \
-                со скачанными приложениями, пока их не перенесли.
-
-                В этом режиме выданный доступ к клавиатуре слетает при каждом \
-                запуске, а автозапуск не работает.
-
-                Перетащите LayoutSwitcher.app в «Программы» через Finder и \
-                запустите оттуда.
-                """
-            alert.addButton(withTitle: "Понятно")
+            alert.messageText = L("alert.translocated.title")
+            alert.informativeText = L("alert.translocated.body")
+            alert.addButton(withTitle: L("alert.translocated.ok"))
             alert.runModal()
         }
 
@@ -718,10 +709,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// не появляется (система показывает его один раз, отказ она запоминает).
     private func explainAccess() {
         let alert = NSAlert()
-        alert.messageText = "Нужен доступ к клавиатуре"
-        alert.informativeText = "Откройте Настройки → Конфиденциальность и безопасность → Универсальный доступ и включите LayoutSwitcher. Перезапускать программу не нужно — она подхватит разрешение сама."
-        alert.addButton(withTitle: "Открыть настройки")
-        alert.addButton(withTitle: "Позже")
+        alert.messageText = L("alert.access.title")
+        alert.informativeText = L("alert.access.body")
+        alert.addButton(withTitle: L("alert.access.open"))
+        alert.addButton(withTitle: L("alert.access.later"))
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn,
            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {

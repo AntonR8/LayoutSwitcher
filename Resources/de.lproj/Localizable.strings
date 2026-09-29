@@ -1,0 +1,27 @@
+/* LayoutSwitcher — de */
+
+"menu.convert.title" = "Letztes Wort umwandeln";
+"menu.convert.subtitle" = "Zweimal Shift – Wort. Noch einmal – mehr.";
+"menu.help" = "Anleitung";
+"menu.access.title" = "Kein Zugriff auf die Tastatur";
+"menu.access.subtitle" = "Klicke hier, um zu sehen, wie du ihn erteilst.";
+"menu.shiftTap.title" = "Layout mit einfachem Shift wechseln";
+"menu.shiftTap.subtitle" = "Eingabesprache mit einem Druck auf Shift wechseln.";
+"menu.diagnostics.title" = "Diagnose kopieren";
+"menu.diagnostics.subtitle" = "Infos für den Support in die Zwischenablage kopieren.";
+"menu.diagnostics.copy" = "Kopieren";
+"menu.diagnostics.copied" = "Kopiert";
+"menu.login.title" = "Beim Anmelden öffnen";
+"menu.login.subtitle" = "App beim Anmelden automatisch starten.";
+"menu.quit" = "Beenden";
+"toggle.on" = "EIN";
+"toggle.off" = "AUS";
+"toggle.a11y.on" = "Ein";
+"toggle.a11y.off" = "Aus";
+"alert.translocated.title" = "LayoutSwitcher in „Programme“ bewegen";
+"alert.translocated.body" = "Die App läuft aus einem temporären Ordner: So verfährt macOS mit geladenen Apps, bis sie bewegt werden.\n\nIn diesem Modus geht der Tastaturzugriff bei jedem Start verloren, und das Öffnen beim Anmelden funktioniert nicht.\n\nZiehe LayoutSwitcher.app im Finder in den Ordner „Programme“ und öffne sie von dort.";
+"alert.translocated.ok" = "Verstanden";
+"alert.access.title" = "Tastaturzugriff erforderlich";
+"alert.access.body" = "Öffne Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen und aktiviere LayoutSwitcher. Ein Neustart der App ist nicht nötig – sie übernimmt die Berechtigung automatisch.";
+"alert.access.open" = "Einstellungen öffnen";
+"alert.access.later" = "Später";

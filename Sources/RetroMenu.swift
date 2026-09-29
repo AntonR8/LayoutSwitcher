@@ -37,7 +37,9 @@ private enum Retro {
     static let redSubtitle = Color(red: 1.00, green: 0.80, blue: 0.80)
     static let text = Color.black
     static let subtitle = Color(red: 0.22, green: 0.22, blue: 0.22)
-    static let toggleOn = Color(red: 0.05, green: 0.15, blue: 0.75)
+    static let ledOn = Color(red: 0.13, green: 0.70, blue: 0.27)
+    static let ledOff = Color(red: 0.25, green: 0.27, blue: 0.25)
+    static let trackOff = Color(red: 0.36, green: 0.36, blue: 0.36)
 
     static func title(_ size: CGFloat = 17) -> Font { .system(size: size, weight: .bold) }
     static let caption = Font.system(size: 13.5)
@@ -94,33 +96,77 @@ private struct Etch: View {
 
 // MARK: - Элементы
 
+/// Переключатель как на приборной панели 80-х: подпись прямо говорит, в каком
+/// он положении, а светодиод рядом горит, пока включено. Ползунок закрывает
+/// ту половину, которая сейчас не действует.
 private struct RetroToggle: View {
     var isOn: Bool
     var action: () -> Void
 
-    private let width: CGFloat = 62
-    private let knob: CGFloat = 26
+    private let width: CGFloat = 92
+    private let knob: CGFloat = 38
 
     var body: some View {
         Button(action: action) {
-            // Ползунок едет вправо, а синяя заливка тянется за ним слева.
-            let travel = width - knob
-            ZStack(alignment: .leading) {
-                Retro.shadow.opacity(0.35)
-                Retro.toggleOn
-                    .frame(width: isOn ? travel : 0)
-                Retro.light
-                    .frame(width: knob)
-                    .overlay(Bevel(raised: true, width: 2))
-                    .offset(x: isOn ? travel : 0)
+            HStack(spacing: 8) {
+                led
+                ZStack(alignment: .leading) {
+                    label(L("toggle.on"), on: true)
+                    label(L("toggle.off"), on: false)
+                    Retro.face
+                        .frame(width: knob)
+                        .overlay(grip)
+                        .overlay(Bevel(raised: true, width: 2))
+                        .offset(x: isOn ? width - knob : 0)
+                }
+                .frame(width: width, height: 30, alignment: .leading)
+                .background(isOn ? Retro.ledOn : Retro.trackOff)
+                .clipped()
+                .overlay(Bevel(raised: false, width: 2))
             }
-            .frame(width: width, height: 30, alignment: .leading)
-            .clipped()
-            .overlay(Bevel(raised: false, width: 2))
             .animation(.easeInOut(duration: 0.18), value: isOn)
+            // Тумблер — «железка»: включено справа при любом направлении письма.
+            .environment(\.layoutDirection, .leftToRight)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isOn ? "Включено" : "Выключено")
+        .accessibilityLabel(isOn ? L("toggle.a11y.on") : L("toggle.a11y.off"))
+    }
+
+    /// Половина дорожки с подписью. Видна только та, что не закрыта ползунком.
+    private func label(_ text: String, on: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .heavy))
+            .kerning(0.6)
+            .foregroundColor(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .padding(.horizontal, 3)
+            .frame(width: width - knob)
+            .offset(x: on ? 0 : knob)
+            .opacity(isOn == on ? 1 : 0)
+    }
+
+    /// Рифление на ползунке — три вертикальные бороздки.
+    private var grip: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: 0) {
+                    Retro.shadow.frame(width: 1)
+                    Retro.light.frame(width: 1)
+                }
+                .frame(height: 12)
+            }
+        }
+    }
+
+    private var led: some View {
+        Circle()
+            .fill(isOn ? Retro.ledOn : Retro.ledOff)
+            .overlay(Circle().fill(Color.white.opacity(isOn ? 0.55 : 0.15))
+                        .frame(width: 4, height: 4).offset(x: -2, y: -2))
+            .overlay(Circle().stroke(Retro.dark, lineWidth: 1))
+            .frame(width: 12, height: 12)
+            .shadow(color: isOn ? Retro.ledOn.opacity(0.9) : .clear, radius: 4)
     }
 }
 
@@ -225,12 +271,15 @@ struct RetroMenuView: View {
                 .frame(width: 20, height: 9)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, max(10, pointerX - 10))
+                // Носик указывает на значок в строке меню — это экранная
+                // координата, при письме справа налево её зеркалить нельзя.
+                .environment(\.layoutDirection, .leftToRight)
                 .offset(y: 1)
                 .zIndex(1)
 
             VStack(spacing: 0) {
-                Row(icon: "delete.left", title: "Перебить последнее слово",
-                    subtitle: "Двойной Shift — слово. Ещё раз — шире.",
+                Row(icon: "delete.left", title: L("menu.convert.title"),
+                    subtitle: L("menu.convert.subtitle"),
                     plate: .navy, action: model.onConvert) {
                     Button(action: model.onHelp) {
                         Text("?")
@@ -241,42 +290,42 @@ struct RetroMenuView: View {
                             .overlay(Bevel(raised: true, width: 2))
                     }
                     .buttonStyle(.plain)
-                    .help("Как пользоваться")
+                    .help(L("menu.help"))
                 }
                 .overlay(Bevel(raised: false, width: 2))
                 .padding(6)
 
                 if !model.hasAccess {
                     Etch()
-                    Row(icon: "exclamationmark.triangle", title: "Нет доступа к клавиатуре",
-                        subtitle: "Нажмите, чтобы узнать, как его выдать.",
+                    Row(icon: "exclamationmark.triangle", title: L("menu.access.title"),
+                        subtitle: L("menu.access.subtitle"),
                         plate: .red, action: model.onExplainAccess) { EmptyView() }
                 }
 
                 Etch()
-                Row(icon: "keyboard", title: "Переключать раскладку одиночным Shift",
-                    subtitle: "Быстро переключать язык одним нажатием Shift.",
+                Row(icon: "keyboard", title: L("menu.shiftTap.title"),
+                    subtitle: L("menu.shiftTap.subtitle"),
                     action: model.onToggleShiftTap) {
                     RetroToggle(isOn: model.shiftTap, action: model.onToggleShiftTap)
                 }
 
                 Etch()
-                Row(icon: "doc.text", title: "Скопировать диагностику",
-                    subtitle: "Скопировать в буфер информацию для поддержки.") {
-                    Button(model.copied ? "Скопировано" : "Скопировать", action: model.onCopyDiagnostics)
+                Row(icon: "doc.text", title: L("menu.diagnostics.title"),
+                    subtitle: L("menu.diagnostics.subtitle")) {
+                    Button(model.copied ? L("menu.diagnostics.copied") : L("menu.diagnostics.copy"), action: model.onCopyDiagnostics)
                         .buttonStyle(RetroButtonStyle())
                         .frame(minWidth: 130)
                 }
 
                 Etch()
-                Row(icon: "play.fill", iconBoxed: true, title: "Запускать при входе",
-                    subtitle: "Автоматически запускать приложение при входе в систему.",
+                Row(icon: "play.fill", iconBoxed: true, title: L("menu.login.title"),
+                    subtitle: L("menu.login.subtitle"),
                     action: model.onToggleLogin) {
                     RetroToggle(isOn: model.loginEnabled, action: model.onToggleLogin)
                 }
 
                 Etch()
-                Row(icon: "rectangle.portrait.and.arrow.right", title: "Выйти",
+                Row(icon: "rectangle.portrait.and.arrow.right", title: L("menu.quit"),
                     action: model.onQuit) {
                     Text("⌘  Q")
                         .font(.system(size: 14, weight: .bold))
@@ -364,8 +413,7 @@ final class RetroMenuController {
                 self.close()
                 return nil
             }
-            if event.modifierFlags.contains(.command), event.charactersIgnoringModifiers?.lowercased() == "q"
-                || event.charactersIgnoringModifiers == "й" {
+            if event.modifierFlags.contains(.command), event.keyCode == 12 {   // Q в любой раскладке
                 self.model.onQuit()
                 return nil
             }

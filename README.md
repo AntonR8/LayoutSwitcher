@@ -10,6 +10,8 @@
 
 Живёт в строке меню, иконки в Dock нет.
 
+Интерфейс на 13 языках: английский, русский, испанский, французский, португальский, немецкий, турецкий, арабский, китайский (упрощённый), итальянский, японский, украинский и хинди. Язык выбирается по настройкам системы; если его нет в списке — английский.
+
 ---
 
 ## 📥 [Скачать LayoutSwitcher.zip](https://github.com/AntonR8/LayoutSwitcher/releases/latest/download/LayoutSwitcher.zip)
@@ -116,6 +118,7 @@ NOTARIZE=1 SIGN_ID=<отпечаток Developer ID Application> ./build.sh
 | `Sources/Extent.swift` | границы охвата: слово, предложение, смена алфавита, строка |
 | `Sources/ShiftTap.swift` | распознавание одиночного и двойного нажатия Shift |
 | `Sources/RetroMenu.swift` | панель значка в строке меню (SwiftUI): переключатели, диагностика, выход |
+| `Sources/Localization.swift`, `Resources/*.lproj` | переводы интерфейса на 13 языков; `Tests/check_localization.py` проверяет, что все языки полные |
 | `Sources/AXText.swift` | чтение и запись поля в фокусе через Accessibility |
 | `Sources/main.swift` | перехват клавиатуры, смена раскладки, склейка всего вместе |
 

@@ -1,0 +1,27 @@
+/* LayoutSwitcher — ar */
+
+"menu.convert.title" = "تحويل الكلمة الأخيرة";
+"menu.convert.subtitle" = "ضغطتان على Shift — كلمة. مرة أخرى — نطاق أوسع.";
+"menu.help" = "طريقة الاستخدام";
+"menu.access.title" = "لا يوجد وصول إلى لوحة المفاتيح";
+"menu.access.subtitle" = "انقر لمعرفة كيفية منحه.";
+"menu.shiftTap.title" = "تبديل التخطيط بضغطة Shift واحدة";
+"menu.shiftTap.subtitle" = "بدّل لغة الكتابة بضغطة واحدة على Shift.";
+"menu.diagnostics.title" = "نسخ معلومات التشخيص";
+"menu.diagnostics.subtitle" = "نسخ معلومات الدعم إلى الحافظة.";
+"menu.diagnostics.copy" = "نسخ";
+"menu.diagnostics.copied" = "تم النسخ";
+"menu.login.title" = "الفتح عند تسجيل الدخول";
+"menu.login.subtitle" = "تشغيل التطبيق تلقائيًا عند تسجيل الدخول.";
+"menu.quit" = "إنهاء";
+"toggle.on" = "تشغيل";
+"toggle.off" = "إيقاف";
+"toggle.a11y.on" = "مفعّل";
+"toggle.a11y.off" = "غير مفعّل";
+"alert.translocated.title" = "انقل LayoutSwitcher إلى مجلد التطبيقات";
+"alert.translocated.body" = "يعمل التطبيق حاليًا من مجلد مؤقت: يفعل macOS ذلك مع التطبيقات التي تم تنزيلها إلى أن يتم نقلها.\n\nفي هذا الوضع يُفقد الوصول إلى لوحة المفاتيح عند كل تشغيل، ولا يعمل الفتح عند تسجيل الدخول.\n\nاسحب LayoutSwitcher.app إلى مجلد التطبيقات في Finder وافتحه من هناك.";
+"alert.translocated.ok" = "حسنًا";
+"alert.access.title" = "يلزم الوصول إلى لوحة المفاتيح";
+"alert.access.body" = "افتح إعدادات النظام ← الخصوصية والأمن ← تسهيلات الاستخدام وفعّل LayoutSwitcher. لا حاجة لإعادة تشغيل التطبيق — سيكتشف الإذن تلقائيًا.";
+"alert.access.open" = "فتح الإعدادات";
+"alert.access.later" = "لاحقًا";

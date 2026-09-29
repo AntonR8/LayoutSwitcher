@@ -1,0 +1,27 @@
+/* LayoutSwitcher — ru */
+
+"menu.convert.title" = "Перебить последнее слово";
+"menu.convert.subtitle" = "Двойной Shift — слово. Ещё раз — шире.";
+"menu.help" = "Как пользоваться";
+"menu.access.title" = "Нет доступа к клавиатуре";
+"menu.access.subtitle" = "Нажмите, чтобы узнать, как его выдать.";
+"menu.shiftTap.title" = "Переключать раскладку одиночным Shift";
+"menu.shiftTap.subtitle" = "Быстро переключать язык одним нажатием Shift.";
+"menu.diagnostics.title" = "Скопировать диагностику";
+"menu.diagnostics.subtitle" = "Скопировать в буфер информацию для поддержки.";
+"menu.diagnostics.copy" = "Скопировать";
+"menu.diagnostics.copied" = "Скопировано";
+"menu.login.title" = "Запускать при входе";
+"menu.login.subtitle" = "Автоматически запускать приложение при входе в систему.";
+"menu.quit" = "Выйти";
+"toggle.on" = "ВКЛ";
+"toggle.off" = "ВЫКЛ";
+"toggle.a11y.on" = "Включено";
+"toggle.a11y.off" = "Выключено";
+"alert.translocated.title" = "Перенесите LayoutSwitcher в «Программы»";
+"alert.translocated.body" = "Сейчас программа запущена из временной папки: macOS так поступает со скачанными приложениями, пока их не перенесли.\n\nВ этом режиме выданный доступ к клавиатуре слетает при каждом запуске, а автозапуск не работает.\n\nПеретащите LayoutSwitcher.app в «Программы» через Finder и запустите оттуда.";
+"alert.translocated.ok" = "Понятно";
+"alert.access.title" = "Нужен доступ к клавиатуре";
+"alert.access.body" = "Откройте Системные настройки → Конфиденциальность и безопасность → Универсальный доступ и включите LayoutSwitcher. Перезапускать программу не нужно — она подхватит разрешение сама.";
+"alert.access.open" = "Открыть настройки";
+"alert.access.later" = "Позже";

@@ -1,0 +1,27 @@
+/* LayoutSwitcher — hi */
+
+"menu.convert.title" = "अंतिम शब्द बदलें";
+"menu.convert.subtitle" = "दो बार Shift — शब्द। फिर से — और ज़्यादा।";
+"menu.help" = "इस्तेमाल कैसे करें";
+"menu.access.title" = "कीबोर्ड ऐक्सेस नहीं है";
+"menu.access.subtitle" = "इसे देने का तरीका जानने के लिए क्लिक करें।";
+"menu.shiftTap.title" = "एक Shift से लेआउट बदलें";
+"menu.shiftTap.subtitle" = "एक बार Shift दबाकर टाइपिंग की भाषा बदलें।";
+"menu.diagnostics.title" = "डायग्नोस्टिक्स कॉपी करें";
+"menu.diagnostics.subtitle" = "सहायता के लिए जानकारी क्लिपबोर्ड पर कॉपी करें।";
+"menu.diagnostics.copy" = "कॉपी करें";
+"menu.diagnostics.copied" = "कॉपी हो गया";
+"menu.login.title" = "लॉग इन पर खोलें";
+"menu.login.subtitle" = "सिस्टम में लॉग इन करने पर ऐप अपने आप शुरू करें।";
+"menu.quit" = "बंद करें";
+"toggle.on" = "चालू";
+"toggle.off" = "बंद";
+"toggle.a11y.on" = "चालू";
+"toggle.a11y.off" = "बंद";
+"alert.translocated.title" = "LayoutSwitcher को ऐप्लिकेशन फ़ोल्डर में ले जाएँ";
+"alert.translocated.body" = "ऐप अभी एक अस्थायी फ़ोल्डर से चल रहा है: डाउनलोड किए गए ऐप को जब तक दूसरी जगह न ले जाया जाए, macOS उन्हें इसी तरह चलाता है।\n\nइस मोड में हर बार शुरू करने पर कीबोर्ड ऐक्सेस खो जाता है और लॉग इन पर खोलना काम नहीं करता।\n\nFinder में LayoutSwitcher.app को ऐप्लिकेशन फ़ोल्डर में खींचें और वहीं से खोलें।";
+"alert.translocated.ok" = "समझ गया";
+"alert.access.title" = "कीबोर्ड ऐक्सेस ज़रूरी है";
+"alert.access.body" = "सिस्टम सेटिंग्ज़ → गोपनीयता और सुरक्षा → ऐक्सेसिबिलिटी खोलें और LayoutSwitcher चालू करें। ऐप को फिर से शुरू करने की ज़रूरत नहीं है — यह अनुमति अपने आप ले लेगा।";
+"alert.access.open" = "सेटिंग्ज़ खोलें";
+"alert.access.later" = "बाद में";

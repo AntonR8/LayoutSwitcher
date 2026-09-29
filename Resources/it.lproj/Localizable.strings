@@ -1,0 +1,27 @@
+/* LayoutSwitcher — it */
+
+"menu.convert.title" = "Converti l’ultima parola";
+"menu.convert.subtitle" = "Doppio Shift — parola. Ancora — più ampio.";
+"menu.help" = "Come si usa";
+"menu.access.title" = "Nessun accesso alla tastiera";
+"menu.access.subtitle" = "Fai clic per sapere come concederlo.";
+"menu.shiftTap.title" = "Cambia layout con un solo Shift";
+"menu.shiftTap.subtitle" = "Cambia la lingua di digitazione con una pressione di Shift.";
+"menu.diagnostics.title" = "Copia diagnostica";
+"menu.diagnostics.subtitle" = "Copia negli appunti le informazioni per l’assistenza.";
+"menu.diagnostics.copy" = "Copia";
+"menu.diagnostics.copied" = "Copiato";
+"menu.login.title" = "Apri al login";
+"menu.login.subtitle" = "Avvia l’app automaticamente all’accesso.";
+"menu.quit" = "Esci";
+"toggle.on" = "SÌ";
+"toggle.off" = "NO";
+"toggle.a11y.on" = "Attivo";
+"toggle.a11y.off" = "Disattivo";
+"alert.translocated.title" = "Sposta LayoutSwitcher in Applicazioni";
+"alert.translocated.body" = "L’app è in esecuzione da una cartella temporanea: macOS fa così con le app scaricate finché non vengono spostate.\n\nIn questa modalità l’accesso alla tastiera si perde a ogni avvio e l’apertura al login non funziona.\n\nTrascina LayoutSwitcher.app nella cartella Applicazioni dal Finder e aprila da lì.";
+"alert.translocated.ok" = "Ho capito";
+"alert.access.title" = "Serve l’accesso alla tastiera";
+"alert.access.body" = "Apri Impostazioni di Sistema → Privacy e sicurezza → Accessibilità e attiva LayoutSwitcher. Non serve riavviare l’app: rileverà il permesso automaticamente.";
+"alert.access.open" = "Apri Impostazioni";
+"alert.access.later" = "Più tardi";

@@ -1,0 +1,27 @@
+/* LayoutSwitcher — tr */
+
+"menu.convert.title" = "Son kelimeyi dönüştür";
+"menu.convert.subtitle" = "Çift Shift — kelime. Tekrar — daha geniş.";
+"menu.help" = "Nasıl kullanılır";
+"menu.access.title" = "Klavye erişimi yok";
+"menu.access.subtitle" = "Nasıl verileceğini görmek için tıklayın.";
+"menu.shiftTap.title" = "Tek Shift ile klavye düzenini değiştir";
+"menu.shiftTap.subtitle" = "Yazma dilini tek bir Shift basışıyla değiştirin.";
+"menu.diagnostics.title" = "Tanılamayı kopyala";
+"menu.diagnostics.subtitle" = "Destek için bilgileri panoya kopyalayın.";
+"menu.diagnostics.copy" = "Kopyala";
+"menu.diagnostics.copied" = "Kopyalandı";
+"menu.login.title" = "Oturum açılışında başlat";
+"menu.login.subtitle" = "Oturum açtığınızda uygulamayı otomatik olarak başlatın.";
+"menu.quit" = "Çık";
+"toggle.on" = "AÇIK";
+"toggle.off" = "KAPALI";
+"toggle.a11y.on" = "Açık";
+"toggle.a11y.off" = "Kapalı";
+"alert.translocated.title" = "LayoutSwitcher’ı Uygulamalar klasörüne taşıyın";
+"alert.translocated.body" = "Uygulama geçici bir klasörden çalışıyor: macOS, indirilen uygulamaları taşınana kadar böyle çalıştırır.\n\nBu modda klavye erişimi her açılışta kaybolur ve oturum açılışında başlatma çalışmaz.\n\nFinder’da LayoutSwitcher.app’i Uygulamalar klasörüne sürükleyin ve oradan açın.";
+"alert.translocated.ok" = "Anladım";
+"alert.access.title" = "Klavye erişimi gerekli";
+"alert.access.body" = "Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik bölümünü açın ve LayoutSwitcher’ı etkinleştirin. Uygulamayı yeniden başlatmanıza gerek yok — izni kendisi algılar.";
+"alert.access.open" = "Ayarları Aç";
+"alert.access.later" = "Daha Sonra";

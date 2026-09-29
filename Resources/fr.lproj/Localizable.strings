@@ -1,0 +1,27 @@
+/* LayoutSwitcher — fr */
+
+"menu.convert.title" = "Convertir le dernier mot";
+"menu.convert.subtitle" = "Double Maj : le mot. Encore : plus large.";
+"menu.help" = "Mode d’emploi";
+"menu.access.title" = "Pas d’accès au clavier";
+"menu.access.subtitle" = "Cliquez pour savoir comment l’autoriser.";
+"menu.shiftTap.title" = "Changer de disposition avec une seule Maj";
+"menu.shiftTap.subtitle" = "Changez de langue de saisie d’un simple appui sur Maj.";
+"menu.diagnostics.title" = "Copier le diagnostic";
+"menu.diagnostics.subtitle" = "Copier dans le presse-papiers les informations pour l’assistance.";
+"menu.diagnostics.copy" = "Copier";
+"menu.diagnostics.copied" = "Copié";
+"menu.login.title" = "Ouvrir à la connexion";
+"menu.login.subtitle" = "Lancer l’app automatiquement à l’ouverture de session.";
+"menu.quit" = "Quitter";
+"toggle.on" = "OUI";
+"toggle.off" = "NON";
+"toggle.a11y.on" = "Activé";
+"toggle.a11y.off" = "Désactivé";
+"alert.translocated.title" = "Déplacez LayoutSwitcher dans Applications";
+"alert.translocated.body" = "L’app s’exécute depuis un dossier temporaire : macOS procède ainsi avec les apps téléchargées tant qu’elles n’ont pas été déplacées.\n\nDans ce mode, l’accès au clavier est perdu à chaque lancement et l’ouverture à la connexion ne fonctionne pas.\n\nFaites glisser LayoutSwitcher.app dans le dossier Applications depuis le Finder, puis ouvrez-la à partir de là.";
+"alert.translocated.ok" = "Compris";
+"alert.access.title" = "Accès au clavier requis";
+"alert.access.body" = "Ouvrez Réglages Système → Confidentialité et sécurité → Accessibilité et activez LayoutSwitcher. Inutile de relancer l’app : elle détectera l’autorisation automatiquement.";
+"alert.access.open" = "Ouvrir les Réglages";
+"alert.access.later" = "Plus tard";

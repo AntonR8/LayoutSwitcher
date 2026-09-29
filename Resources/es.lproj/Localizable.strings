@@ -1,0 +1,27 @@
+/* LayoutSwitcher — es */
+
+"menu.convert.title" = "Convertir la última palabra";
+"menu.convert.subtitle" = "Doble Shift: la palabra. Otra vez: más amplio.";
+"menu.help" = "Cómo se usa";
+"menu.access.title" = "Sin acceso al teclado";
+"menu.access.subtitle" = "Haz clic para ver cómo concederlo.";
+"menu.shiftTap.title" = "Cambiar la distribución con un solo Shift";
+"menu.shiftTap.subtitle" = "Cambia el idioma de escritura con una pulsación de Shift.";
+"menu.diagnostics.title" = "Copiar diagnóstico";
+"menu.diagnostics.subtitle" = "Copiar al portapapeles la información para soporte.";
+"menu.diagnostics.copy" = "Copiar";
+"menu.diagnostics.copied" = "Copiado";
+"menu.login.title" = "Abrir al iniciar sesión";
+"menu.login.subtitle" = "Abrir la app automáticamente al iniciar sesión.";
+"menu.quit" = "Salir";
+"toggle.on" = "SÍ";
+"toggle.off" = "NO";
+"toggle.a11y.on" = "Activado";
+"toggle.a11y.off" = "Desactivado";
+"alert.translocated.title" = "Mueve LayoutSwitcher a Aplicaciones";
+"alert.translocated.body" = "La app se está ejecutando desde una carpeta temporal: macOS lo hace con las apps descargadas hasta que se mueven.\n\nEn este modo, el acceso al teclado se pierde en cada inicio y la apertura al iniciar sesión no funciona.\n\nArrastra LayoutSwitcher.app a la carpeta Aplicaciones en el Finder y ábrela desde allí.";
+"alert.translocated.ok" = "Entendido";
+"alert.access.title" = "Se necesita acceso al teclado";
+"alert.access.body" = "Abre Ajustes del Sistema → Privacidad y seguridad → Accesibilidad y activa LayoutSwitcher. No hace falta reiniciar la app: detectará el permiso automáticamente.";
+"alert.access.open" = "Abrir Ajustes";
+"alert.access.later" = "Más tarde";

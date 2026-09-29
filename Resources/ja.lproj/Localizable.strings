@@ -1,0 +1,27 @@
+/* LayoutSwitcher — ja */
+
+"menu.convert.title" = "最後の単語を変換";
+"menu.convert.subtitle" = "Shift を2回：単語。もう一度：範囲を拡大。";
+"menu.help" = "使い方";
+"menu.access.title" = "キーボードへのアクセス権がありません";
+"menu.access.subtitle" = "クリックして許可の方法を確認します。";
+"menu.shiftTap.title" = "Shift 1回でキーボード配列を切り替え";
+"menu.shiftTap.subtitle" = "Shift を1回押すだけで入力言語を切り替えます。";
+"menu.diagnostics.title" = "診断情報をコピー";
+"menu.diagnostics.subtitle" = "サポート用の情報をクリップボードにコピーします。";
+"menu.diagnostics.copy" = "コピー";
+"menu.diagnostics.copied" = "コピーしました";
+"menu.login.title" = "ログイン時に開く";
+"menu.login.subtitle" = "ログイン時にアプリを自動的に起動します。";
+"menu.quit" = "終了";
+"toggle.on" = "オン";
+"toggle.off" = "オフ";
+"toggle.a11y.on" = "オン";
+"toggle.a11y.off" = "オフ";
+"alert.translocated.title" = "LayoutSwitcher を「アプリケーション」に移動してください";
+"alert.translocated.body" = "アプリは一時フォルダから実行されています。ダウンロードしたアプリは、移動されるまで macOS がこのように実行します。\n\nこのモードでは、起動のたびにキーボードへのアクセス権が失われ、「ログイン時に開く」も機能しません。\n\nFinder で LayoutSwitcher.app を「アプリケーション」フォルダにドラッグし、そこから開いてください。";
+"alert.translocated.ok" = "了解";
+"alert.access.title" = "キーボードへのアクセス権が必要です";
+"alert.access.body" = "「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」を開き、LayoutSwitcher をオンにしてください。アプリを再起動する必要はありません。許可は自動的に反映されます。";
+"alert.access.open" = "設定を開く";
+"alert.access.later" = "後で";
