@@ -14,6 +14,10 @@
 "menu.login.title" = "الفتح عند تسجيل الدخول";
 "menu.login.subtitle" = "تشغيل التطبيق تلقائيًا عند تسجيل الدخول.";
 "menu.quit" = "إنهاء";
+"menu.developer.caption" = "من تطوير";
+"menu.developer.role" = "مطوّر iOS";
+"menu.developer.status" = "متاح للعمل";
+"menu.developer.about" = "نبذة عني";
 "toggle.on" = "تشغيل";
 "toggle.off" = "إيقاف";
 "toggle.a11y.on" = "مفعّل";

@@ -14,6 +14,10 @@
 "menu.login.title" = "Ouvrir à la connexion";
 "menu.login.subtitle" = "Lancer l’app automatiquement à l’ouverture de session.";
 "menu.quit" = "Quitter";
+"menu.developer.caption" = "Créé par";
+"menu.developer.role" = "Développeur iOS";
+"menu.developer.status" = "ouvert aux opportunités";
+"menu.developer.about" = "À propos";
 "toggle.on" = "OUI";
 "toggle.off" = "NON";
 "toggle.a11y.on" = "Activé";

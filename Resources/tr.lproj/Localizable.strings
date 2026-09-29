@@ -14,6 +14,10 @@
 "menu.login.title" = "Oturum açılışında başlat";
 "menu.login.subtitle" = "Oturum açtığınızda uygulamayı otomatik olarak başlatın.";
 "menu.quit" = "Çık";
+"menu.developer.caption" = "Geliştiren";
+"menu.developer.role" = "iOS Geliştirici";
+"menu.developer.status" = "iş tekliflerine açık";
+"menu.developer.about" = "Hakkımda";
 "toggle.on" = "AÇIK";
 "toggle.off" = "KAPALI";
 "toggle.a11y.on" = "Açık";

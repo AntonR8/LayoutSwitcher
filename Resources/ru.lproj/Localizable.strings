@@ -14,6 +14,10 @@
 "menu.login.title" = "Запускать при входе";
 "menu.login.subtitle" = "Автоматически запускать приложение при входе в систему.";
 "menu.quit" = "Выйти";
+"menu.developer.caption" = "Автор";
+"menu.developer.role" = "iOS-разработчик";
+"menu.developer.status" = "открыт к предложениям";
+"menu.developer.about" = "Обо мне";
 "toggle.on" = "ВКЛ";
 "toggle.off" = "ВЫКЛ";
 "toggle.a11y.on" = "Включено";

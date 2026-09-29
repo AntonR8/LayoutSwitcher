@@ -43,7 +43,9 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string></string>
+	<string>© 2026 Anton Razguliaev</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

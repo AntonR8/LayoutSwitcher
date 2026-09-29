@@ -14,6 +14,10 @@
 "menu.login.title" = "Beim Anmelden öffnen";
 "menu.login.subtitle" = "App beim Anmelden automatisch starten.";
 "menu.quit" = "Beenden";
+"menu.developer.caption" = "Entwickelt von";
+"menu.developer.role" = "iOS-Entwickler";
+"menu.developer.status" = "offen für Angebote";
+"menu.developer.about" = "Über mich";
 "toggle.on" = "EIN";
 "toggle.off" = "AUS";
 "toggle.a11y.on" = "Ein";

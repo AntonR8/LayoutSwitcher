@@ -14,6 +14,10 @@
 "menu.login.title" = "Open at login";
 "menu.login.subtitle" = "Start the app automatically when you log in.";
 "menu.quit" = "Quit";
+"menu.developer.caption" = "Created by";
+"menu.developer.role" = "iOS Developer";
+"menu.developer.status" = "open to work";
+"menu.developer.about" = "About me";
 "toggle.on" = "ON";
 "toggle.off" = "OFF";
 "toggle.a11y.on" = "On";

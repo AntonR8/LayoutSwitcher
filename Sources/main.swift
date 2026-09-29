@@ -340,36 +340,38 @@ final class Engine {
         var out: [String] = []
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         out.append("LayoutSwitcher \(version)")
-        out.append("путь: \(Bundle.main.bundlePath)")
-        out.append("доступ к клавиатуре: \(AXIsProcessTrusted() ? "есть" : "НЕТ")")
+        out.append("macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        out.append("UI language: \(Bundle.main.preferredLocalizations.first ?? "?") (system: \(Locale.preferredLanguages.first ?? "?"))")
+        out.append("path: \(Bundle.main.bundlePath)")
+        out.append("keyboard access: \(AXIsProcessTrusted() ? "yes" : "NO")")
         let tapUp = tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false
-        out.append("перехват событий: \(tapUp ? "поднят" : "НЕ ПОДНЯТ")")
-        out.append("короткий Shift меняет раскладку: \(switchLayoutOnShiftTap ? "да" : "нет")")
+        out.append("event tap: \(tapUp ? "running" : "NOT RUNNING")")
+        out.append("single Shift switches layout: \(switchLayoutOnShiftTap ? "yes" : "no")")
 
         let sources = Layouts.enabled()
-        out.append("включённых раскладок: \(sources.count)")
+        out.append("enabled layouts: \(sources.count)")
         for s in sources {
-            out.append("  • \(Layouts.identifier(s)) — \(Layouts.isASCII(s) ? "латинская" : "нелатинская")")
+            out.append("  • \(Layouts.identifier(s)) — \(Layouts.isASCII(s) ? "Latin" : "non-Latin")")
         }
 
         guard let (latin, other) = Layouts.pair() else {
-            out.append("ПАРА РАСКЛАДОК НЕ СОБРАНА — нужна одна латинская и одна нелатинская")
+            out.append("NO LAYOUT PAIR — need one Latin and one non-Latin layout")
             return out.joined(separator: "\n")
         }
-        out.append("пара: \(Layouts.identifier(latin)) ↔ \(Layouts.identifier(other))")
+        out.append("pair: \(Layouts.identifier(latin)) ↔ \(Layouts.identifier(other))")
 
         guard let pair = mappings() else {
-            out.append("ТАБЛИЦЫ НЕ ПОСТРОИЛИСЬ")
+            out.append("MAPPING TABLES FAILED TO BUILD")
             return out.joined(separator: "\n")
         }
-        out.append("таблица лат→нелат: \(pair.latinToCyrillic.forward.count) символов")
-        out.append("таблица нелат→лат: \(pair.cyrillicToLatin.forward.count) символов")
-        out.append("проверка «ghjdthrf» → «\(pair.convert("ghjdthrf"))»")
+        out.append("table Latin→other: \(pair.latinToCyrillic.forward.count) chars")
+        out.append("table other→Latin: \(pair.cyrillicToLatin.forward.count) chars")
+        out.append("check \"ghjdthrf\" → \"\(pair.convert("ghjdthrf"))\"")
 
         if let field = AXText.read() {
-            out.append("чтение поля: работает, в фокусе \(field.text.count) симв., каретка \(field.caret)")
+            out.append("field read: OK, \(field.text.count) chars in focus, caret at \(field.caret)")
         } else {
-            out.append("чтение поля: НЕТ (это нормально, если отчёт вызван из меню)")
+            out.append("field read: NO (normal when the report comes from the menu)")
         }
         return out.joined(separator: "\n")
     }
@@ -599,6 +601,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         image.size = NSSize(width: 18, height: 18)
         image.isTemplate = false
+        image.accessibilityDescription = "LayoutSwitcher"
         button.image = image
         button.title = ""
     }
@@ -640,6 +643,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.explainAccess()
         }
         model.onQuit = { NSApp.terminate(nil) }
+        model.onAboutDeveloper = { [weak self] in
+            self?.menu.close()
+            if let url = URL(string: "https://antonr8.github.io") { NSWorkspace.shared.open(url) }
+        }
         menu.onClose = { [weak self] in self?.statusItem.button?.highlight(false) }
 
         refreshLoginState()
@@ -797,8 +804,8 @@ if CommandLine.arguments.contains("--diagnostics") {
     // клавиатуре выдан Терминалу, здесь напишется «есть», хотя у самой программы
     // его нет. Отчёт из меню значка такой ошибки не даёт.
     print("")
-    print("ВНИМАНИЕ: отчёт снят из Терминала — строки о доступе относятся к правам")
-    print("Терминала, а не программы. Проверяйте через меню значка.")
+    print("NOTE: this report was taken from Terminal, so the access lines reflect")
+    print("Terminal's permissions, not the app's. Use Copy diagnostics in the menu instead.")
     exit(0)
 }
 

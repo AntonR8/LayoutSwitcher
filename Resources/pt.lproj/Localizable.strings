@@ -14,6 +14,10 @@
 "menu.login.title" = "Abrir ao iniciar sessão";
 "menu.login.subtitle" = "Abrir o app automaticamente ao iniciar a sessão.";
 "menu.quit" = "Sair";
+"menu.developer.caption" = "Criado por";
+"menu.developer.role" = "Desenvolvedor iOS";
+"menu.developer.status" = "aberto a oportunidades";
+"menu.developer.about" = "Sobre mim";
 "toggle.on" = "LIG";
 "toggle.off" = "DESL";
 "toggle.a11y.on" = "Ativado";

@@ -14,6 +14,10 @@
 "menu.login.title" = "登录时打开";
 "menu.login.subtitle" = "登录系统时自动启动应用。";
 "menu.quit" = "退出";
+"menu.developer.caption" = "作者";
+"menu.developer.role" = "iOS 开发者";
+"menu.developer.status" = "正在寻找工作机会";
+"menu.developer.about" = "关于我";
 "toggle.on" = "开";
 "toggle.off" = "关";
 "toggle.a11y.on" = "已开启";

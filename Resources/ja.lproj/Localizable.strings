@@ -14,6 +14,10 @@
 "menu.login.title" = "ログイン時に開く";
 "menu.login.subtitle" = "ログイン時にアプリを自動的に起動します。";
 "menu.quit" = "終了";
+"menu.developer.caption" = "開発者";
+"menu.developer.role" = "iOS デベロッパー";
+"menu.developer.status" = "仕事募集中";
+"menu.developer.about" = "自己紹介";
 "toggle.on" = "オン";
 "toggle.off" = "オフ";
 "toggle.a11y.on" = "オン";

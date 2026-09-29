@@ -20,6 +20,7 @@ final class MenuModel: ObservableObject {
     var onToggleLogin: () -> Void = {}
     var onExplainAccess: () -> Void = {}
     var onQuit: () -> Void = {}
+    var onAboutDeveloper: () -> Void = {}
 }
 
 // MARK: - Палитра
@@ -39,6 +40,8 @@ private enum Retro {
     static let subtitle = Color(red: 0.22, green: 0.22, blue: 0.22)
     static let ledOn = Color(red: 0.13, green: 0.70, blue: 0.27)
     static let ledOff = Color(red: 0.25, green: 0.27, blue: 0.25)
+    /// Зелёный для текста: светодиодный на сером фоне читается плохо.
+    static let statusText = Color(red: 0.05, green: 0.42, blue: 0.14)
     static let trackOff = Color(red: 0.36, green: 0.36, blue: 0.36)
 
     static func title(_ size: CGFloat = 17) -> Font { .system(size: size, weight: .bold) }
@@ -129,7 +132,7 @@ private struct RetroToggle: View {
             .environment(\.layoutDirection, .leftToRight)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isOn ? L("toggle.a11y.on") : L("toggle.a11y.off"))
+        .accessibilityHidden(true)
     }
 
     /// Половина дорожки с подписью. Видна только та, что не закрыта ползунком.
@@ -159,15 +162,7 @@ private struct RetroToggle: View {
         }
     }
 
-    private var led: some View {
-        Circle()
-            .fill(isOn ? Retro.ledOn : Retro.ledOff)
-            .overlay(Circle().fill(Color.white.opacity(isOn ? 0.55 : 0.15))
-                        .frame(width: 4, height: 4).offset(x: -2, y: -2))
-            .overlay(Circle().stroke(Retro.dark, lineWidth: 1))
-            .frame(width: 12, height: 12)
-            .shadow(color: isOn ? Retro.ledOn.opacity(0.9) : .clear, radius: 4)
-    }
+    private var led: some View { Led(on: isOn) }
 }
 
 private struct RetroButtonStyle: ButtonStyle {
@@ -192,6 +187,115 @@ private enum Plate {
     var subtitle: Color { self == .navy ? Retro.navySubtitle : Retro.redSubtitle }
 }
 
+/// Строки собраны из жестов, а не из кнопок, и VoiceOver их не видел.
+/// Строка с действием становится одной кнопкой: заголовок, подпись и
+/// состояние тумблера читаются вместе. Строка без действия (диагностика)
+/// остаётся контейнером, чтобы её кнопка «Скопировать» была доступна отдельно.
+private struct RowAccessibility: ViewModifier {
+    var action: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let action {
+            content
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { action() }
+        } else {
+            content.accessibilityElement(children: .contain)
+        }
+    }
+}
+
+/// Светодиод: горит зелёным, когда `on`.
+private struct Led: View {
+    var on: Bool
+    var size: CGFloat = 12
+
+    var body: some View {
+        Circle()
+            .fill(on ? Retro.ledOn : Retro.ledOff)
+            .overlay(Circle().fill(Color.white.opacity(on ? 0.55 : 0.15))
+                        .frame(width: size / 3, height: size / 3)
+                        .offset(x: -size / 6, y: -size / 6))
+            .overlay(Circle().stroke(Retro.dark, lineWidth: 1))
+            .frame(width: size, height: size)
+            .shadow(color: on ? Retro.ledOn.opacity(0.9) : .clear, radius: size / 3)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Бесплатное приложение — поэтому в меню есть визитка автора со ссылкой на сайт.
+private struct DeveloperRow: View {
+    var action: () -> Void
+    @State private var hover = false
+
+    static let name = "Anton Razguliaev"
+
+    /// Разрядка заголовка — как на табличках 80-х. Но в связных письменностях
+    /// (арабская, деванагари) она рвёт буквы, поэтому там её нет.
+    static var captionKerning: CGFloat {
+        let joined = L("menu.developer.caption").unicodeScalars.contains {
+            (0x0600...0x06FF).contains($0.value) || (0x0900...0x097F).contains($0.value)
+        }
+        return joined ? 0 : 1.6
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(L("menu.developer.caption").uppercased())
+                .font(.system(size: 11, weight: .heavy))
+                .kerning(Self.captionKerning)
+                .foregroundColor(Retro.shadow)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+
+            HStack(spacing: 14) {
+                avatar
+                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Self.name)
+                        .font(Retro.title())
+                        .kerning(0.4)
+                        .foregroundColor(Retro.navy)
+                    HStack(spacing: 6) {
+                        Text(L("menu.developer.role"))
+                            .foregroundColor(Retro.subtitle)
+                        Text("·").foregroundColor(Retro.shadow).accessibilityHidden(true)
+                        Led(on: true, size: 9)
+                        Text(L("menu.developer.status"))
+                            .foregroundColor(Retro.statusText)
+                    }
+                    .font(Retro.caption)
+                }
+                Spacer(minLength: 12)
+                Button(L("menu.developer.about"), action: action)
+                    .buttonStyle(RetroButtonStyle())
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
+        .background(hover ? Retro.faceHover : Retro.face)
+        .contentShape(Rectangle())
+        .onHover { hover = $0 }
+        .onTapGesture(perform: action)
+        .modifier(RowAccessibility(action: action))
+    }
+
+    @ViewBuilder private var avatar: some View {
+        if let image = RetroMenuView.developerAvatar {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 36))
+                .foregroundColor(Retro.text)
+        }
+    }
+}
+
 /// Строка меню: значок слева, заголовок с подписью, элемент управления справа.
 private struct Row<Trailing: View>: View {
     let icon: String
@@ -199,6 +303,8 @@ private struct Row<Trailing: View>: View {
     let title: String
     var subtitle: String? = nil
     var plate: Plate? = nil
+    /// Что VoiceOver прочитает как состояние строки — у тумблеров «вкл/выкл».
+    var accessibilityValue: String? = nil
     var action: (() -> Void)? = nil
     @ViewBuilder var trailing: () -> Trailing
 
@@ -231,6 +337,8 @@ private struct Row<Trailing: View>: View {
         .contentShape(Rectangle())
         .onHover { hover = $0 }
         .onTapGesture { action?() }
+        .modifier(RowAccessibility(action: action))
+        .accessibilityValue(accessibilityValue ?? "")
     }
 
     private var background: Color {
@@ -241,6 +349,7 @@ private struct Row<Trailing: View>: View {
 
     @ViewBuilder private var iconView: some View {
         let image = Image(systemName: icon)
+            .accessibilityHidden(true)
             .font(.system(size: iconBoxed ? 20 : 26, weight: .semibold))
             .foregroundColor(plate != nil ? .white : Retro.text)
         if iconBoxed {
@@ -262,6 +371,8 @@ struct RetroMenuView: View {
     var pointerX: CGFloat
 
     static let width: CGFloat = 690
+    /// Логотип автора (Resources/Developer.png). Предпросмотр подставляет его сам.
+    static var developerAvatar: NSImage? = NSImage(named: "Developer")
 
     var body: some View {
         VStack(spacing: 0) {
@@ -291,7 +402,9 @@ struct RetroMenuView: View {
                     }
                     .buttonStyle(.plain)
                     .help(L("menu.help"))
+                    .accessibilityHidden(true)
                 }
+                .accessibilityAction(named: Text(L("menu.help")), model.onHelp)
                 .overlay(Bevel(raised: false, width: 2))
                 .padding(6)
 
@@ -305,6 +418,7 @@ struct RetroMenuView: View {
                 Etch()
                 Row(icon: "keyboard", title: L("menu.shiftTap.title"),
                     subtitle: L("menu.shiftTap.subtitle"),
+                    accessibilityValue: model.shiftTap ? L("toggle.a11y.on") : L("toggle.a11y.off"),
                     action: model.onToggleShiftTap) {
                     RetroToggle(isOn: model.shiftTap, action: model.onToggleShiftTap)
                 }
@@ -320,9 +434,13 @@ struct RetroMenuView: View {
                 Etch()
                 Row(icon: "play.fill", iconBoxed: true, title: L("menu.login.title"),
                     subtitle: L("menu.login.subtitle"),
+                    accessibilityValue: model.loginEnabled ? L("toggle.a11y.on") : L("toggle.a11y.off"),
                     action: model.onToggleLogin) {
                     RetroToggle(isOn: model.loginEnabled, action: model.onToggleLogin)
                 }
+
+                Etch()
+                DeveloperRow(action: model.onAboutDeveloper)
 
                 Etch()
                 Row(icon: "rectangle.portrait.and.arrow.right", title: L("menu.quit"),
