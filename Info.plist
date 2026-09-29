@@ -4,6 +4,16 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>LayoutSwitcher</string>
+	<key>CFBundleExecutable</key>
+	<string>LayoutSwitcher</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.anton.layoutswitcher</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>en</string>
@@ -20,32 +30,22 @@
 		<string>uk</string>
 		<string>hi</string>
 	</array>
-	<key>CFBundleDisplayName</key>
-	<string>LayoutSwitcher</string>
-	<key>CFBundleExecutable</key>
-	<string>LayoutSwitcher</string>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
-	<key>CFBundleIconName</key>
-	<string>AppIcon</string>
-	<key>CFBundleIdentifier</key>
-	<string>local.anton.layoutswitcher</string>
 	<key>CFBundleName</key>
 	<string>LayoutSwitcher</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.15</string>
+	<string>1.16</string>
 	<key>CFBundleVersion</key>
-	<string>17</string>
+	<string>18</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Anton Razguliaev</string>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.utilities</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
