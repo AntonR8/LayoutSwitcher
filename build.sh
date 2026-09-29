@@ -14,7 +14,7 @@ APP="$BUILD/LayoutSwitcher.app"
 DEPLOY="13.0"
 
 SRC=("$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" "$DIR/Sources/Chain.swift" \
-     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
+     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/RetroMenu.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
 
 rm -rf "$BUILD"
 mkdir -p "$BUILD"
@@ -36,6 +36,11 @@ lipo -create -output "$APP/Contents/MacOS/LayoutSwitcher" \
 rm -f "$BUILD/LayoutSwitcher-arm64" "$BUILD/LayoutSwitcher-x86_64"
 
 cp "$DIR/Info.plist" "$APP/Contents/Info.plist"
+
+# Значок в строке меню. Исходники — Assets/StatusIcon.svg и StatusIconOn.svg
+# (зелёная стрелка: одиночный Shift меняет раскладку). PNG отрисованы из них
+# заранее: NSImage на macOS 13 SVG не читает.
+cp "$DIR"/Assets/StatusIcon*.png "$APP/Contents/Resources/"
 
 # Значок приложения собирается в двух видах, потому что одного не хватает.
 #

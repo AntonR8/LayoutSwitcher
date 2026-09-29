@@ -574,21 +574,34 @@ final class Engine {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private var loginItem: NSMenuItem!
-    private var shiftTapItem: NSMenuItem!
-    /// Пункт-предупреждение «нет доступа». Появляется в меню, пока доступа нет.
-    private var accessItem: NSMenuItem?
+    private let menu = RetroMenuController()
 
     /// Ключ настройки «короткий Shift меняет раскладку».
     private static let shiftTapKey = "SwitchLayoutOnShiftTap"
 
-    /// Значок в строке меню. Любое имя из SF Symbols — посмотреть можно в SF Symbols.app.
+    /// Запасной значок, если StatusIcon не нашёлся в ресурсах. Любое имя из SF Symbols — посмотреть можно в SF Symbols.app.
     /// Тот же символ, что и в значке приложения, чтобы программа опознавалась одинаково
     /// в строке меню, в Finder и в списке «Универсального доступа».
     /// Доступен с macOS 11.0 — ниже LSMinimumSystemVersion, так что запасной путь не нужен.
     private static let symbolName = "keyboard.macwindow"
     /// Значок, когда нет доступа к клавиатуре.
     private static let alertSymbolName = "exclamationmark.triangle"
+
+    /// Обычный значок — клавиша Shift из Assets/StatusIcon.svg. Цветной, не
+    /// template: серая клавиша читается и на светлой, и на тёмной строке меню.
+    /// Стрелка горит зелёным, пока одиночный Shift меняет раскладку.
+    private func setStatusIcon() {
+        guard let button = statusItem.button else { return }
+        let name = Engine.shared.switchLayoutOnShiftTap ? "StatusIconOn" : "StatusIcon"
+        guard let image = NSImage(named: name) else {
+            setSymbol(Self.symbolName)      // ресурса нет — хотя бы системный символ
+            return
+        }
+        image.size = NSSize(width: 18, height: 18)
+        image.isTemplate = false
+        button.image = image
+        button.title = ""
+    }
 
     /// Ставит символ на кнопку. Template-режим — чтобы система сама красила
     /// его под светлую/тёмную тему и режим повышенного контраста.
@@ -608,37 +621,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        setSymbol(Self.symbolName)
+        setStatusIcon()
 
-        let menu = NSMenu()
-        let convert = NSMenuItem(title: "Перебить последнее слово",
-                                 action: #selector(convertNow), keyEquivalent: "")
-        convert.target = self
-        menu.addItem(convert)
+        if let button = statusItem.button {
+            button.target = self
+            button.action = #selector(toggleMenu)
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
 
-        let hint = NSMenuItem(title: "Двойной Shift — слово. Ещё раз — шире.", action: nil, keyEquivalent: "")
-        hint.isEnabled = false
-        menu.addItem(hint)
-        menu.addItem(.separator())
-
-        shiftTapItem = NSMenuItem(title: "Короткий Shift меняет раскладку",
-                                   action: #selector(toggleShiftTapSwitch), keyEquivalent: "")
-        shiftTapItem.target = self
-        menu.addItem(shiftTapItem)
-        menu.addItem(.separator())
-
-        let diag = NSMenuItem(title: "Скопировать диагностику", action: #selector(copyDiagnostics), keyEquivalent: "")
-        diag.target = self
-        menu.addItem(diag)
-        menu.addItem(.separator())
-
-        loginItem = NSMenuItem(title: "Запускать при входе", action: #selector(toggleLogin), keyEquivalent: "")
-        loginItem.target = self
-        menu.addItem(loginItem)
-        menu.addItem(.separator())
-
-        menu.addItem(NSMenuItem(title: "Выйти", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        statusItem.menu = menu
+        let model = menu.model
+        model.onConvert = { [weak self] in self?.convertNow() }
+        model.onHelp = { [weak self] in self?.showHelp() }
+        model.onToggleShiftTap = { [weak self] in self?.toggleShiftTapSwitch() }
+        model.onCopyDiagnostics = { [weak self] in self?.copyDiagnostics() }
+        model.onToggleLogin = { [weak self] in self?.toggleLogin() }
+        model.onExplainAccess = { [weak self] in
+            self?.menu.close()
+            self?.explainAccess()
+        }
+        model.onQuit = { NSApp.terminate(nil) }
+        menu.onClose = { [weak self] in self?.statusItem.button?.highlight(false) }
 
         refreshLoginState()
 
@@ -675,46 +677,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !AXIsProcessTrusted() { showAccessWarning() }
     }
 
-    /// Пока доступа нет: треугольник в строке меню и пункт с объяснением.
+    /// Пока доступа нет: треугольник в строке меню и строка с объяснением в панели.
     /// Своего окна тут не показываем — система в этот момент уже показывает
     /// собственный запрос, и два окна встают друг на друга: наше перекрывает
     /// системное, а нажать надо именно системное.
     private func showAccessWarning() {
         setSymbol(Self.alertSymbolName)
-
-        if accessItem == nil, let menu = statusItem.menu {
-            let item = NSMenuItem(title: "Нет доступа к клавиатуре — выдать…",
-                                  action: #selector(explainAccess), keyEquivalent: "")
-            item.target = self
-            menu.insertItem(item, at: 0)
-            menu.insertItem(.separator(), at: 1)
-            accessItem = item
-        }
+        menu.model.hasAccess = false
 
         // Вернуть обычный значок и убрать предупреждение, когда доступ появится.
         Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
             guard AXIsProcessTrusted(), let self else { return }
-            self.setSymbol(Self.symbolName)
-            self.clearAccessWarning()
+            self.setStatusIcon()
+            self.menu.model.hasAccess = true
             timer.invalidate()
         }
     }
 
-    private func clearAccessWarning() {
-        guard let item = accessItem, let menu = statusItem.menu else { return }
-        let index = menu.index(of: item)
-        if index >= 0 {
-            if index + 1 < menu.numberOfItems, menu.item(at: index + 1)?.isSeparatorItem == true {
-                menu.removeItem(at: index + 1)
-            }
-            menu.removeItem(at: index)
+    @objc private func toggleMenu() {
+        if menu.isShown {
+            menu.close()
+            return
         }
-        accessItem = nil
+        guard let button = statusItem.button else { return }
+        refreshLoginState()
+        menu.model.hasAccess = AXIsProcessTrusted()
+        menu.model.copied = false
+        button.highlight(true)
+        menu.show(below: button)
+    }
+
+    private func showHelp() {
+        menu.close()
+        if let url = URL(string: "https://github.com/AntonR8/LayoutSwitcher#readme") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// Объяснение по требованию — когда системный запрос уже закрыт или больше
     /// не появляется (система показывает его один раз, отказ она запоминает).
-    @objc private func explainAccess() {
+    private func explainAccess() {
         let alert = NSAlert()
         alert.messageText = "Нужен доступ к клавиатуре"
         alert.informativeText = "Откройте Настройки → Конфиденциальность и безопасность → Универсальный доступ и включите LayoutSwitcher. Перезапускать программу не нужно — она подхватит разрешение сама."
@@ -739,25 +741,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
-    @objc private func convertNow() {
-        Engine.shared.convert(expanding: false)
+    /// Панель не забирает фокус, поэтому поле, в котором печатали, по-прежнему
+    /// в фокусе. Закрываем её и перебиваем на следующем витке, когда она уже ушла.
+    private func convertNow() {
+        menu.close()
+        DispatchQueue.main.async {
+            Engine.shared.convert(expanding: false)
+        }
     }
 
     /// Отчёт о состоянии — чтобы не гадать по переписке, почему «ничего не работает».
     /// Кладём в буфер обмена: человеку остаётся вставить его в сообщение.
-    @objc private func copyDiagnostics() {
+    /// Подтверждение — надпись на самой кнопке, без отдельного окна.
+    private func copyDiagnostics() {
         let report = Engine.shared.diagnostics()
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(report, forType: .string)
 
-        let alert = NSAlert()
-        alert.messageText = "Отчёт скопирован"
-        alert.informativeText = "Вставьте его в сообщение — по нему видно, что именно не работает.\n\n" + report
-        alert.addButton(withTitle: "ОК")
-        alert.runModal()
+        menu.model.copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.menu.model.copied = false
+        }
     }
 
-    @objc private func toggleShiftTapSwitch() {
+    private func toggleShiftTapSwitch() {
         let enabled = !Engine.shared.switchLayoutOnShiftTap
         UserDefaults.standard.set(enabled, forKey: Self.shiftTapKey)
         applyShiftTapSetting(enabled)
@@ -765,10 +772,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func applyShiftTapSetting(_ enabled: Bool) {
         Engine.shared.switchLayoutOnShiftTap = enabled
-        shiftTapItem.state = enabled ? .on : .off
+        menu.model.shiftTap = enabled
+        // Пока нет доступа, в строке меню треугольник — его не перебиваем.
+        if AXIsProcessTrusted() { setStatusIcon() }
     }
 
-    @objc private func toggleLogin() {
+    private func toggleLogin() {
         do {
             if SMAppService.mainApp.status == .enabled {
                 try SMAppService.mainApp.unregister()
@@ -782,7 +791,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshLoginState() {
-        loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.model.loginEnabled = SMAppService.mainApp.status == .enabled
     }
 }
 

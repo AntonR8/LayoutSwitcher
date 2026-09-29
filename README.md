@@ -116,6 +116,7 @@ SIGN_ID=<отпечаток сертификата> ./build.sh
 | `Sources/Mapping.swift` | таблица «символ → символ», строится перебором клавиш через `UCKeyTranslate` |
 | `Sources/Extent.swift` | границы охвата: слово, предложение, смена алфавита, строка |
 | `Sources/ShiftTap.swift` | распознавание одиночного и двойного нажатия Shift |
+| `Sources/RetroMenu.swift` | панель значка в строке меню (SwiftUI): переключатели, диагностика, выход |
 | `Sources/AXText.swift` | чтение и запись поля в фокусе через Accessibility |
 | `Sources/main.swift` | перехват клавиатуры, смена раскладки, склейка всего вместе |
 

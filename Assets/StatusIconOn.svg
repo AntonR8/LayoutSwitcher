@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="outer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8f9090"/>
+      <stop offset="0.45" stop-color="#c8c8c5"/>
+      <stop offset="1" stop-color="#777878"/>
+    </linearGradient>
+    <linearGradient id="frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0f0ec"/>
+      <stop offset="0.5" stop-color="#d8d8d5"/>
+      <stop offset="1" stop-color="#a9aaa9"/>
+    </linearGradient>
+    <linearGradient id="key" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbfbfa"/>
+      <stop offset="0.62" stop-color="#eeeeec"/>
+      <stop offset="1" stop-color="#d3d4d3"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="9"/>
+      <feOffset dy="7"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".42"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="b"/>
+      <feFlood flood-color="#34c759" flood-opacity=".7"/>
+      <feComposite in2="b" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- soft shadow -->
+  <rect x="55" y="55" width="402" height="402" rx="92" fill="#000" opacity=".28" filter="url(#soft)"/>
+
+  <!-- outer body -->
+  <rect x="44" y="36" width="424" height="424" rx="98" fill="url(#outer)" stroke="#666766" stroke-width="3"/>
+  <rect x="54" y="46" width="404" height="404" rx="88" fill="none" stroke="#deded9" stroke-opacity=".65" stroke-width="5"/>
+
+  <!-- inner bezel -->
+  <rect x="69" y="61" width="374" height="374" rx="72" fill="url(#frame)" stroke="#f7f7f4" stroke-width="5"/>
+  <rect x="80" y="72" width="352" height="352" rx="63" fill="#c5c6c5" stroke="#8b8c8b" stroke-width="4"/>
+
+  <!-- keycap -->
+  <rect x="94" y="86" width="324" height="324" rx="45" fill="#252728" opacity=".55"/>
+  <rect x="99" y="80" width="314" height="314" rx="43" fill="url(#key)" stroke="#fafafa" stroke-width="4"/>
+  <rect x="107" y="88" width="298" height="298" rx="37" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3"/>
+  <path d="M116 355 Q120 378 143 384 L369 384 Q391 378 396 355" fill="none" stroke="#a5a6a5" stroke-width="4" opacity=".45"/>
+
+  <!-- shift arrow -->
+  <path d="M256 137 L192 203 L218 203 L218 263 L294 263 L294 203 L320 203 Z"
+        fill="#34c759" stroke="#1e8e3e" stroke-width="13" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M256 151 L208 201 L228 201 L228 252 L284 252 L284 201 L304 201 Z"
+        fill="none" stroke="#a8f0b5" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- label -->
+  <text x="256" y="323"
+        text-anchor="middle"
+        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="48"
+        font-weight="400"
+        letter-spacing="-1"
+        fill="#55585a">shift</text>
+</svg>
