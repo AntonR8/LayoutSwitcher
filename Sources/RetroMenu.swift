@@ -32,6 +32,9 @@ private enum Retro {
     static let dark = Color.black
     static let navy = Color(red: 0.00, green: 0.05, blue: 0.55)
     static let navySubtitle = Color(red: 0.78, green: 0.82, blue: 1.00)
+    static let red = Color(red: 0.66, green: 0.00, blue: 0.00)
+    static let redHover = Color(red: 0.78, green: 0.06, blue: 0.06)
+    static let redSubtitle = Color(red: 1.00, green: 0.80, blue: 0.80)
     static let text = Color.black
     static let subtitle = Color(red: 0.22, green: 0.22, blue: 0.22)
     static let toggleOn = Color(red: 0.05, green: 0.15, blue: 0.75)
@@ -134,13 +137,22 @@ private struct RetroButtonStyle: ButtonStyle {
     }
 }
 
+/// Цветная плашка под строкой: синяя — главное действие, красная — беда.
+private enum Plate {
+    case navy, red
+
+    var background: Color { self == .navy ? Retro.navy : Retro.red }
+    var hover: Color { self == .navy ? Retro.navy : Retro.redHover }
+    var subtitle: Color { self == .navy ? Retro.navySubtitle : Retro.redSubtitle }
+}
+
 /// Строка меню: значок слева, заголовок с подписью, элемент управления справа.
 private struct Row<Trailing: View>: View {
     let icon: String
     var iconBoxed = false
     let title: String
     var subtitle: String? = nil
-    var highlighted = false
+    var plate: Plate? = nil
     var action: (() -> Void)? = nil
     @ViewBuilder var trailing: () -> Trailing
 
@@ -154,12 +166,12 @@ private struct Row<Trailing: View>: View {
                 Text(title)
                     .font(Retro.title())
                     .kerning(0.4)
-                    .foregroundColor(highlighted ? .white : Retro.text)
+                    .foregroundColor(plate != nil ? .white : Retro.text)
                 if let subtitle {
                     Text(subtitle)
                         .font(Retro.caption)
                         .kerning(0.2)
-                        .foregroundColor(highlighted ? Retro.navySubtitle : Retro.subtitle)
+                        .foregroundColor(plate?.subtitle ?? Retro.subtitle)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -169,16 +181,22 @@ private struct Row<Trailing: View>: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(minHeight: subtitle == nil ? 50 : 64)
-        .background(highlighted ? Retro.navy : (hover && action != nil ? Retro.faceHover : Retro.face))
+        .background(background)
         .contentShape(Rectangle())
         .onHover { hover = $0 }
         .onTapGesture { action?() }
     }
 
+    private var background: Color {
+        let hot = hover && action != nil
+        if let plate { return hot ? plate.hover : plate.background }
+        return hot ? Retro.faceHover : Retro.face
+    }
+
     @ViewBuilder private var iconView: some View {
         let image = Image(systemName: icon)
             .font(.system(size: iconBoxed ? 20 : 26, weight: .semibold))
-            .foregroundColor(highlighted ? .white : Retro.text)
+            .foregroundColor(plate != nil ? .white : Retro.text)
         if iconBoxed {
             image
                 .frame(width: 40, height: 36)
@@ -213,7 +231,7 @@ struct RetroMenuView: View {
             VStack(spacing: 0) {
                 Row(icon: "delete.left", title: "Перебить последнее слово",
                     subtitle: "Двойной Shift — слово. Ещё раз — шире.",
-                    highlighted: true, action: model.onConvert) {
+                    plate: .navy, action: model.onConvert) {
                     Button(action: model.onHelp) {
                         Text("?")
                             .font(.system(size: 17, weight: .heavy))
@@ -232,7 +250,7 @@ struct RetroMenuView: View {
                     Etch()
                     Row(icon: "exclamationmark.triangle", title: "Нет доступа к клавиатуре",
                         subtitle: "Нажмите, чтобы узнать, как его выдать.",
-                        action: model.onExplainAccess) { EmptyView() }
+                        plate: .red, action: model.onExplainAccess) { EmptyView() }
                 }
 
                 Etch()
