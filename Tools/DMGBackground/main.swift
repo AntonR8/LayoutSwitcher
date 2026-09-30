@@ -86,7 +86,7 @@ let background = ZStack(alignment: .topLeading) {
             .font(.system(size: 22, weight: .bold))
             .kerning(0.5)
             .foregroundColor(.white)
-        Text("Drag the app to Applications to install")
+        Text("Double-click the app to install, or drag it to Applications")
             .font(.system(size: 13))
             .foregroundColor(cNavySubtitle)
     }
@@ -108,7 +108,7 @@ let background = ZStack(alignment: .topLeading) {
     .frame(width: 100, height: 64)
     .position(x: (appX + appsX) / 2, y: iconY)
 
-    Text("Перетащите LayoutSwitcher в папку «Программы»")
+    Text("Дважды щёлкните LayoutSwitcher или перетащите в «Программы»")
         .font(.system(size: 12))
         .foregroundColor(cShadow)
         .frame(width: W)

@@ -30,15 +30,19 @@ The same release as an archive: [LayoutSwitcher.zip](https://github.com/AntonR8/
 
 ## Install
 
-**1.** Open `LayoutSwitcher.dmg` and drag `LayoutSwitcher` onto the Applications shortcut in the same window.
+**1.** Open `LayoutSwitcher.dmg` and double-click `LayoutSwitcher` in its window. macOS will ask whether you want to open an app downloaded from the internet — click Open.
 
-**2.** Launch LayoutSwitcher from Applications. macOS will ask whether you want to open an app downloaded from the internet — click Open.
+**2.** The app copies itself to Applications, closes the installer window, ejects the disk image and relaunches from Applications.
 
-> Launch it from Applications, not straight from the disk image or Downloads. From there macOS runs a temporary copy, and the keyboard permission is lost on every launch.
+> Dragging `LayoutSwitcher` onto the Applications shortcut and launching it from there works too. If you launch it from Downloads or another folder, the setup window offers to move it for you.
 
-**3.** macOS will ask for keyboard access. Go to **System Settings → Privacy & Security → Accessibility**, add `LayoutSwitcher` and turn it on. No restart needed — the app picks up the permission by itself, and the red “No keyboard access” row disappears from the menu.
+**3.** The setup window opens and walks you through the rest; each step lights up when it's done:
 
-**4.** Turn on “Open at login” in the menu if you like.
+- **Keyboard access.** Click “Grant access”, choose “Open System Settings” in the macOS window and turn on LayoutSwitcher. No restart needed — the app picks up the permission by itself.
+- **Try it.** Type the suggested word in the wrong layout and press Shift twice.
+- **Open at login**, so the app keeps working after a restart.
+
+You can reopen the window later with the “?” button in the menu. The icon itself is a Shift key in the menu bar at the top right.
 
 If you'd rather not grant this kind of access to a binary you haven't checked — [build it yourself](#build-from-source), it's two commands.
 
@@ -60,7 +64,7 @@ To update: quit LayoutSwitcher (⌘Q in its menu), download the new version and 
 
 ## Troubleshooting
 
-1. Open the menu. A red “No keyboard access” row means the permission isn't granted: click it and follow the instructions.
+1. Open the menu. A red “No keyboard access” row means the permission isn't granted: click it to open the setup window. Its “Grant access” button first resets the old LayoutSwitcher entry in Accessibility, so the macOS prompt appears even if access was once given to another build or denied.
 2. If there's no red row but converting doesn't work, click **Copy** in the “Copy diagnostics” row and attach the report to a [bug report](https://github.com/AntonR8/LayoutSwitcher/issues/new?template=bug_report.md). It shows where things stop: access, keyboard tap, layouts, reading the text field. What you typed is never included.
 3. You can also get the report from Terminal: `/Applications/LayoutSwitcher.app/Contents/MacOS/LayoutSwitcher --diagnostics`. But there the access lines reflect Terminal's permissions, not the app's, so the report from the menu is more reliable.
 
@@ -130,6 +134,7 @@ A whole release in one command — bumps the version, runs the tests, builds and
 ```
 ./Tests/render_menu.sh                 # the menu in every language → build/menu/<lang>.png
 ./Tests/render_menu.sh out --a11y      # plus what VoiceOver will read
+./Tests/render_setup.sh                # the setup window in every language and step → build/setup/<lang>-<step>.png
 ```
 
 Use it to check the layout after changing translations and to make the README screenshots (`Assets/screenshots`).

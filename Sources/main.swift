@@ -332,6 +332,27 @@ final class Engine {
         }
     }
 
+    // MARK: Для окна настройки
+
+    /// Перебивка прошла — окно настройки засчитывает по ней проверку.
+    static let didConvert = Notification.Name("LayoutSwitcherDidConvert")
+
+    /// Есть ли пара раскладок «латинская + своя». Без неё перебивать не во что.
+    var hasLayoutPair: Bool { Layouts.pair() != nil }
+
+    /// Пример для проверки: что набрать в латинской раскладке и что получится.
+    /// Берём первое слово, которое целиком набирается во второй раскладке человека;
+    /// для незнакомых раскладок примера нет — тогда подсказка без него.
+    func example() -> (typed: String, result: String)? {
+        guard let pair = mappings() else { return nil }
+        let table = pair.cyrillicToLatin.forward
+        for word in ["привіт", "привет", "здраво", "γεια", "שלום", "مرحبا"]
+        where word.allSatisfy({ table[$0] != nil }) {
+            return (pair.cyrillicToLatin.convert(word), word)
+        }
+        return nil
+    }
+
     // MARK: Диагностика
 
     /// Состояние всех узлов, на которых перебивка может молча остановиться.
@@ -397,7 +418,10 @@ final class Engine {
     /// - Parameter expanding: `false` — всегда начинать со слова (вызов из меню).
     func convert(expanding: Bool = true) {
         guard let pair = mappings() else { return }
-        if let field = AXText.read() {
+        // В собственном окне (поле проверки в настройке) Accessibility не трогаем:
+        // запрос к своему же процессу с главного потока ждёт сам себя до таймаута.
+        let ownWindow = NSWorkspace.shared.frontmostApplication?.processIdentifier == getpid()
+        if !ownWindow, let field = AXText.read() {
             convertInField(field, using: pair, expanding: expanding)
         } else {
             convertByTyping(using: pair, expanding: expanding)
@@ -450,6 +474,7 @@ final class Engine {
         lastWritten = result
         lastConvertAt = CFAbsoluteTimeGetCurrent()
         selectLayout(for: MappingPair.dominantScript(of: converted))
+        NotificationCenter.default.post(name: Self.didConvert, object: nil)
     }
 
     /// Вернуть поле к тому, что было до перебивки. Длина при перебивке не меняется
@@ -518,6 +543,7 @@ final class Engine {
             self.sendText(converted)
             self.typed = Array(base[0..<start]) + Array(converted)
             self.lastConvertAt = CFAbsoluteTimeGetCurrent()
+            NotificationCenter.default.post(name: Self.didConvert, object: nil)
         }
     }
 
@@ -577,6 +603,7 @@ final class Engine {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let menu = RetroMenuController()
+    private let setup = SetupWindowController()
 
     /// Ключ настройки «короткий Shift меняет раскладку».
     private static let shiftTapKey = "SwitchLayoutOnShiftTap"
@@ -623,6 +650,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Открыли прямо из окна DMG — ставим себя в «Программы» и уступаем место той копии.
+        if Installer.installFromDiskImageIfNeeded() { return }
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         setStatusIcon()
 
@@ -634,45 +664,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let model = menu.model
         model.onConvert = { [weak self] in self?.convertNow() }
-        model.onHelp = { [weak self] in self?.showHelp() }
+        model.onHelp = { [weak self] in self?.showSetup() }
         model.onToggleShiftTap = { [weak self] in self?.toggleShiftTapSwitch() }
         model.onCopyDiagnostics = { [weak self] in self?.copyDiagnostics() }
         model.onToggleLogin = { [weak self] in self?.toggleLogin() }
-        model.onExplainAccess = { [weak self] in
-            self?.menu.close()
-            self?.explainAccess()
-        }
+        model.onExplainAccess = { [weak self] in self?.showSetup() }
         model.onQuit = { NSApp.terminate(nil) }
         model.onAboutDeveloper = { [weak self] in
             self?.menu.close()
             if let url = URL(string: "https://antonr8.github.io") { NSWorkspace.shared.open(url) }
         }
         menu.onClose = { [weak self] in self?.statusItem.button?.highlight(false) }
+        setup.onToggleLogin = { [weak self] in self?.toggleLogin() }
 
         refreshLoginState()
 
         UserDefaults.standard.register(defaults: [Self.shiftTapKey: true])
         applyShiftTapSetting(UserDefaults.standard.bool(forKey: Self.shiftTapKey))
 
-        // Gatekeeper запускает скачанное приложение из случайной папки только для
-        // чтения (App Translocation), пока его не перенесли в Finder. Путь меняется
-        // при каждом запуске, поэтому выданный «Универсальный доступ» перестаёт
-        // действовать, а автозапуск не регистрируется. Снаружи это выглядит как
-        // «разрешения дал, значок есть, ничего не работает» — предупреждаем сразу.
-        if Self.isTranslocated() {
-            FileHandle.standardError.write(Data("LayoutSwitcher: запущен из временной копии (App Translocation), путь \(Bundle.main.bundlePath)\n".utf8))
-            let alert = NSAlert()
-            alert.messageText = L("alert.translocated.title")
-            alert.informativeText = L("alert.translocated.body")
-            alert.addButton(withTitle: L("alert.translocated.ok"))
-            alert.runModal()
-        }
-
-        requestAccessibilityIfNeeded()
+        let justInstalled = Installer.finishInstallIfNeeded()
 
         Engine.shared.startOrWaitForPermission()
-
         if !AXIsProcessTrusted() { showAccessWarning() }
+
+        // Системный запрос доступа здесь не вызываем: macOS показывает его не
+        // всегда, и тогда человек видит только значок с «!». Окно настройки ведёт
+        // по шагам, а запрос отправляет по кнопке — так он появляется наверняка.
+        if justInstalled || !AXIsProcessTrusted() || !Installer.isInApplications {
+            setup.show()
+        }
     }
 
     /// Пока доступа нет: треугольник в строке меню и строка с объяснением в панели.
@@ -705,38 +725,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.show(below: button)
     }
 
-    private func showHelp() {
+    private func showSetup() {
         menu.close()
-        if let url = URL(string: "https://github.com/AntonR8/LayoutSwitcher#readme") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    /// Объяснение по требованию — когда системный запрос уже закрыт или больше
-    /// не появляется (система показывает его один раз, отказ она запоминает).
-    private func explainAccess() {
-        let alert = NSAlert()
-        alert.messageText = L("alert.access.title")
-        alert.informativeText = L("alert.access.body")
-        alert.addButton(withTitle: L("alert.access.open"))
-        alert.addButton(withTitle: L("alert.access.later"))
-        NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn,
-           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    /// Запущены ли мы из читаемой только временной копии, которую делает Gatekeeper.
-    /// Проверяем путь, а не SecTranslocateIsTranslocatedURL: тот требует, чтобы
-    /// вызывающий процесс сам был translocated-совместим, и в песочнице шумит.
-    private static func isTranslocated() -> Bool {
-        Bundle.main.bundlePath.contains("/AppTranslocation/")
-    }
-
-    private func requestAccessibilityIfNeeded() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
+        setup.show()
     }
 
     /// Панель не забирает фокус, поэтому поле, в котором печатали, по-прежнему
@@ -781,6 +772,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try SMAppService.mainApp.unregister()
             } else {
                 try SMAppService.mainApp.register()
+                // Бывает, что система включает автозапуск только после подтверждения
+                // в «Объектах входа» — тогда сразу открываем их, а не молчим.
+                if SMAppService.mainApp.status == .requiresApproval {
+                    SMAppService.openSystemSettingsLoginItems()
+                }
             }
         } catch {
             NSLog("login item: \(error)")

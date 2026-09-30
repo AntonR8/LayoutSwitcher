@@ -14,7 +14,7 @@ APP="$BUILD/LayoutSwitcher.app"
 DEPLOY="13.0"
 
 SRC=("$DIR/Sources/Mapping.swift" "$DIR/Sources/Extent.swift" "$DIR/Sources/Chain.swift" \
-     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/RetroMenu.swift" "$DIR/Sources/Localization.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/main.swift")
+     "$DIR/Sources/ShiftTap.swift" "$DIR/Sources/RetroMenu.swift" "$DIR/Sources/Localization.swift" "$DIR/Sources/AXText.swift" "$DIR/Sources/Installer.swift" "$DIR/Sources/SetupView.swift" "$DIR/Sources/SetupWindow.swift" "$DIR/Sources/main.swift")
 
 rm -rf "$BUILD"
 mkdir -p "$BUILD"

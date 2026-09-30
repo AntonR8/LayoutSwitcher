@@ -25,7 +25,7 @@ final class MenuModel: ObservableObject {
 
 // MARK: - Палитра
 
-private enum Retro {
+enum Retro {
     static let face = Color(red: 0.76, green: 0.76, blue: 0.76)
     static let faceHover = Color(red: 0.83, green: 0.83, blue: 0.83)
     static let light = Color.white
@@ -52,7 +52,7 @@ private enum Retro {
 
 /// Двойная рамка: светлые грани сверху-слева и тёмные снизу-справа — «выпуклая»,
 /// наоборот — «вдавленная».
-private struct Bevel: View {
+struct Bevel: View {
     var raised = true
     var width: CGFloat = 2
 
@@ -88,7 +88,7 @@ private struct Bevel: View {
 }
 
 /// Бороздка между строками: тёмная линия и светлая под ней.
-private struct Etch: View {
+struct Etch: View {
     var body: some View {
         VStack(spacing: 0) {
             Retro.shadow.frame(height: 1)
@@ -102,7 +102,7 @@ private struct Etch: View {
 /// Переключатель как на приборной панели 80-х: подпись прямо говорит, в каком
 /// он положении, а светодиод рядом горит, пока включено. Ползунок закрывает
 /// ту половину, которая сейчас не действует.
-private struct RetroToggle: View {
+struct RetroToggle: View {
     var isOn: Bool
     var action: () -> Void
 
@@ -165,7 +165,7 @@ private struct RetroToggle: View {
     private var led: some View { Led(on: isOn) }
 }
 
-private struct RetroButtonStyle: ButtonStyle {
+struct RetroButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13, weight: .semibold))
@@ -207,7 +207,7 @@ private struct RowAccessibility: ViewModifier {
 }
 
 /// Светодиод: горит зелёным, когда `on`.
-private struct Led: View {
+struct Led: View {
     var on: Bool
     var size: CGFloat = 12
 
